@@ -1,11 +1,5 @@
 package com.stremio.mobile.presentation.screens
 
-import android.app.Activity
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,17 +25,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.presentation.components.ThemedButton
 import com.stremio.mobile.presentation.components.ThemedCard
 import com.stremio.mobile.presentation.components.UrlInputRow
-import com.stremio.mobile.server.LOCAL_NETWORK_PERMISSION
+import com.stremio.mobile.presentation.components.rememberLocalNetworkPermissionRequest
 import com.stremio.mobile.server.StreamingServerState
 import com.stremio.mobile.server.formatServerErrorMessage
-import com.stremio.mobile.server.hasLocalNetworkPermission
+import com.stremio.mobile.server.needsLocalNetworkPermission
+import com.stremio.mobile.server.parseStreamingServerUrl
 
 @Composable
 fun StreamingSettingsScreen(
@@ -131,8 +125,12 @@ fun StreamingSettingsScreen(
                 if (usesRemoteServer && serverState is StreamingServerState.Failed) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ThemedButton(text = "Retry", onClick = onRetryServer)
-                        if (!hasLocalNetworkPermission(LocalContext.current)) {
-                            LocalNetworkPermissionButton(onGranted = onRetryServer)
+                        if (needsLocalNetworkPermission(LocalContext.current, customServerUrl)) {
+                            val requestLocalNetwork = rememberLocalNetworkPermissionRequest(openSettingsIfBlocked = true)
+                            ThemedButton(
+                                text = "Allow Nearby Devices",
+                                onClick = { requestLocalNetwork { granted -> if (granted) onRetryServer() } },
+                            )
                         }
                     }
                 }
@@ -280,23 +278,6 @@ fun StreamingSettingsScreen(
 }
 
 @Composable
-private fun LocalNetworkPermissionButton(onGranted: () -> Unit) {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        val activity = context as? Activity
-        if (granted) {
-            onGranted()
-        } else if (activity == null || !ActivityCompat.shouldShowRequestPermissionRationale(activity, LOCAL_NETWORK_PERMISSION)) {
-            // Android stops showing the dialog after two denials; then it can only be allowed in the app's settings.
-            context.startActivity(
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
-            )
-        }
-    }
-    ThemedButton(text = "Allow Nearby Devices", onClick = { launcher.launch(LOCAL_NETWORK_PERMISSION) })
-}
-
-@Composable
 private fun CustomServerCard(
     customServerUrl: String,
     isCustomServerEnabled: Boolean,
@@ -305,15 +286,28 @@ private fun CustomServerCard(
     var urlInput by rememberSaveable { mutableStateOf(customServerUrl) }
     var enabled by rememberSaveable { mutableStateOf(isCustomServerEnabled) }
     var urlError by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val requestLocalNetwork = rememberLocalNetworkPermissionRequest()
+
+    // Saving may restart the app, so the permission is asked first; a denial still saves (a VPN address works without it).
+    fun save(newEnabled: Boolean, url: String) {
+        val commit = {
+            urlError = !onSetCustomServer(newEnabled, url)
+            if (!urlError) enabled = newEnabled
+        }
+        val parsedUrl = parseStreamingServerUrl(url)
+        if (newEnabled && parsedUrl != null && needsLocalNetworkPermission(context, parsedUrl)) {
+            requestLocalNetwork { commit() }
+        } else {
+            commit()
+        }
+    }
 
     SettingsToggleRow(
         title = "Use Custom Server",
         checked = enabled,
-        onCheckedChange = { checked ->
-            // Turning off doesn't save edits in the field.
-            urlError = !onSetCustomServer(checked, if (checked) urlInput else customServerUrl)
-            if (!urlError) enabled = checked
-        },
+        // Turning off doesn't save edits in the field.
+        onCheckedChange = { checked -> save(checked, if (checked) urlInput else customServerUrl) },
         description = "Stream through a server on another device, e.g. Stremio on your PC, instead of the built-in one. " +
             "Switching servers restarts the app.",
     )
@@ -322,7 +316,7 @@ private fun CustomServerCard(
         onValueChange = { urlInput = it; urlError = false },
         placeholder = "http://192.168.1.10:11470",
         buttonText = "Save",
-        onSubmit = { urlError = !onSetCustomServer(enabled, urlInput) },
+        onSubmit = { save(enabled, urlInput) },
         errorText = "Enter a valid http(s) URL, e.g. http://192.168.1.10:11470".takeIf { urlError },
     )
 }

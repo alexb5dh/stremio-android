@@ -16,6 +16,22 @@ const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 fun hasLocalNetworkPermission(context: Context): Boolean =
     Build.VERSION.SDK_INT < 37 || context.checkSelfPermission(LOCAL_NETWORK_PERMISSION) == PackageManager.PERMISSION_GRANTED
 
+fun needsLocalNetworkPermission(context: Context, baseUrl: String): Boolean =
+    isLocalNetworkUrl(baseUrl) && !hasLocalNetworkPermission(context)
+
+/** Private, link-local and `.local`/single-label hosts; not Tailscale's `100.x`/`fd7a:115c:a1e0:` VPN addresses. */
+fun isLocalNetworkUrl(baseUrl: String): Boolean {
+    val host = runCatching { URI(baseUrl).host }.getOrNull()?.lowercase()?.removeSurrounding("[", "]") ?: return false
+    if (':' in host) {
+        return host.startsWith("fe80:") || (host.startsWith("fc") || host.startsWith("fd")) && !host.startsWith("fd7a:115c:a1e0:")
+    }
+    if ('.' !in host || host.endsWith(".local")) return true
+    val octets = host.split('.').map { it.toIntOrNull() ?: return false }
+    if (octets.size != 4) return false
+    val (a, b) = octets
+    return a == 10 || a == 192 && b == 168 || a == 172 && b in 16..31 || a == 169 && b == 254
+}
+
 fun formatServerErrorMessage(message: String): String {
     return if (message.contains("failed to bind", ignoreCase = true) || message.contains("11470")) {
         "Port 11470 is already in use. Please close any other Stremio or streaming apps running in the background and try again."

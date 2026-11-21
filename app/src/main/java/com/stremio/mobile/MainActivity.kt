@@ -15,14 +15,11 @@ import androidx.lifecycle.ViewModelProvider
 import com.stremio.mobile.auth.FacebookLoginBridge
 import com.stremio.mobile.presentation.screens.StremioMobileApp
 import com.stremio.mobile.presentation.viewmodel.MainViewModel
-import com.stremio.mobile.server.LOCAL_NETWORK_PERMISSION
 
 class MainActivity : ComponentActivity() {
-    private val permissionRequest = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) { granted ->
-        if (granted[LOCAL_NETWORK_PERMISSION] == true) viewModel.checkServerWorking()
-    }
+    private val notificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
 
     private val viewModel: MainViewModel by viewModels {
         val app = application as MainApplication
@@ -52,7 +49,7 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        requestPermissions()
+        requestNotificationPermission()
         viewModel.acceptIntent(intent)
 
         setContent {
@@ -84,13 +81,9 @@ class MainActivity : ComponentActivity() {
         viewModel.onAppBackgrounded()
     }
 
-    private fun requestPermissions() {
-        val permissions = buildList {
-            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
-            if (Build.VERSION.SDK_INT >= 37 && (application as MainApplication).container.customServerUrl != null) {
-                add(LOCAL_NETWORK_PERMISSION)
-            }
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        if (permissions.isNotEmpty()) permissionRequest.launch(permissions.toTypedArray())
     }
 }
