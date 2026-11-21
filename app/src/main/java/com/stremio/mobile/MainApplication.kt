@@ -68,7 +68,6 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
         }
         container = AppContainer(this)
         val analyticsEnabled = container.authRepository.isAnalyticsEnabled()
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(analyticsEnabled)
 
         if (BuildConfig.POSTHOG_API_KEY.isNotEmpty()) {
             val posthogConfig = PostHogAndroidConfig(
@@ -84,7 +83,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
             }
             PostHogAndroid.setup(this, posthogConfig)
         }
-
+        Telemetry.setEnabled(this, analyticsEnabled)
     }
 
     override fun newImageLoader(context: Context): ImageLoader {

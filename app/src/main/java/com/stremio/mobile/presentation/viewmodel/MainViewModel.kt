@@ -623,15 +623,7 @@ class MainViewModel(
     fun setAnalyticsEnabled(enabled: Boolean) {
         authRepository.setAnalyticsEnabled(enabled)
         isAnalyticsEnabled.value = enabled
-        
-        if (enabled) {
-            com.posthog.PostHog.optIn()
-        } else {
-            com.posthog.PostHog.optOut()
-        }
-        
-        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
-            .setCrashlyticsCollectionEnabled(enabled)
+        com.stremio.mobile.Telemetry.setEnabled(appContext, enabled)
     }
 
     fun setAutoUpdateEnabled(enabled: Boolean) {

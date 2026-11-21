@@ -88,7 +88,7 @@ class AuthRepository(
         preferences.edit().putBoolean("keep_screen_on", enabled).apply()
     }
 
-    fun isAnalyticsEnabled(): Boolean = preferences.getBoolean("analytics_enabled", true)
+    fun isAnalyticsEnabled(): Boolean = preferences.getBoolean("analytics_enabled", false)
     fun setAnalyticsEnabled(enabled: Boolean) {
         preferences.edit().putBoolean("analytics_enabled", enabled).apply()
     }
