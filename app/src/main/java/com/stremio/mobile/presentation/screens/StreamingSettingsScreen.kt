@@ -1,5 +1,11 @@
 package com.stremio.mobile.presentation.screens
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,17 +27,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.presentation.components.ThemedButton
 import com.stremio.mobile.presentation.components.ThemedCard
 import com.stremio.mobile.presentation.components.UrlInputRow
+import com.stremio.mobile.server.LOCAL_NETWORK_PERMISSION
 import com.stremio.mobile.server.StreamingServerState
 import com.stremio.mobile.server.formatServerErrorMessage
+import com.stremio.mobile.server.hasLocalNetworkPermission
 
 @Composable
 fun StreamingSettingsScreen(
@@ -119,7 +129,12 @@ fun StreamingSettingsScreen(
                 }
 
                 if (usesRemoteServer && serverState is StreamingServerState.Failed) {
-                    ThemedButton(text = "Retry", onClick = onRetryServer)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ThemedButton(text = "Retry", onClick = onRetryServer)
+                        if (!hasLocalNetworkPermission(LocalContext.current)) {
+                            LocalNetworkPermissionButton(onGranted = onRetryServer)
+                        }
+                    }
                 }
             }
         }
@@ -262,6 +277,23 @@ fun StreamingSettingsScreen(
             description = "Automatically play the next best stream instead of asking"
         )
     }
+}
+
+@Composable
+private fun LocalNetworkPermissionButton(onGranted: () -> Unit) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val activity = context as? Activity
+        if (granted) {
+            onGranted()
+        } else if (activity == null || !ActivityCompat.shouldShowRequestPermissionRationale(activity, LOCAL_NETWORK_PERMISSION)) {
+            // Android stops showing the dialog after two denials; then it can only be allowed in the app's settings.
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+            )
+        }
+    }
+    ThemedButton(text = "Allow Nearby Devices", onClick = { launcher.launch(LOCAL_NETWORK_PERMISSION) })
 }
 
 @Composable

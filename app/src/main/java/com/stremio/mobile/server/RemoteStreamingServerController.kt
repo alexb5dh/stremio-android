@@ -50,7 +50,7 @@ class RemoteStreamingServerController(
                 // No URL: formatServerErrorMessage reads "11470" as a port conflict.
                 StreamingServerState.Failed(
                     if (hasLocalNetworkPermission()) "Remote streaming server is not reachable"
-                    else "Remote streaming server is not reachable. For a server on your Wi-Fi, allow Nearby devices for this app."
+                    else "Remote streaming server is not reachable. A server on your Wi-Fi needs the Nearby devices permission."
                 )
             }
         }
