@@ -349,8 +349,9 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                 )
             }
 
-            // A remote server being offline (PC asleep) isn't fatal; settings show it.
-            if (state.server is StreamingServerState.Failed && !state.usesRemoteStreamingServer) {
+            // Not fatal for an offline remote server (PC asleep) or a build without the on-device one: settings show it,
+            // and a custom server can still be set there.
+            if (state.server is StreamingServerState.Failed && !state.usesRemoteStreamingServer && !viewModel.isOnDeviceServerMissing) {
                 val context = LocalContext.current
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = {

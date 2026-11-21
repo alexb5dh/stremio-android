@@ -25,6 +25,7 @@ import com.stremio.mobile.presentation.state.*
 import com.stremio.mobile.server.ServerService
 import com.stremio.mobile.server.StreamingServerController
 import com.stremio.mobile.server.StreamingServerState
+import com.stremio.mobile.server.StubStreamingServerController
 import com.stremio.mobile.server.formatServerErrorMessage
 import com.stremio.mobile.server.parseStreamingServerUrl
 import com.stremio.mobile.update.ApkInstaller
@@ -609,6 +610,9 @@ class MainViewModel(
     }
 
     val streamingServerUrl: String get() = core.streamingServerUrl
+
+    /** The build has no on-device server (e.g. debug builds without the stream_server library). */
+    val isOnDeviceServerMissing: Boolean get() = serverController is StubStreamingServerController
 
     /** Restarts the app if the server in use changes. Returns false, saving nothing, if [urlInput] is invalid. */
     fun setCustomStreamingServer(enabled: Boolean, urlInput: String): Boolean {
