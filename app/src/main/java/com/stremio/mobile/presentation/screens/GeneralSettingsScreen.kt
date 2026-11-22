@@ -220,7 +220,7 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
                     
                     PrivacyBulletPoint(
                         title = "1. Analytics & Diagnostics",
-                        description = "If you opt in, we collect usage telemetry via PostHog and Firebase Analytics, and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance."
+                        description = "If you opt in, we collect usage telemetry via PostHog and Firebase Analytics, performance metrics via Firebase Performance, and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance. The Facebook SDK, used for Facebook login, contacts Facebook only when this is on or when you use Facebook login."
                     )
                     PrivacyBulletPoint(
                         title = "2. PII Scrubbing in Logs",
@@ -232,7 +232,7 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
                     )
                     PrivacyBulletPoint(
                         title = "4. Opt-In Controls",
-                        description = "Analytics collection is off until you enable it in Settings -> Android Settings -> Share Diagnostics & Analytics, and you can disable it again at any time."
+                        description = "Analytics collection is off until you enable it in Settings -> Android Settings -> Share Diagnostics & Analytics, and you can disable it again at any time. Firebase Performance starts and the Facebook SDK stops on the next app launch after you change the setting."
                     )
                     PrivacyBulletPoint(
                         title = "5. Upstream Stremio Telemetry",

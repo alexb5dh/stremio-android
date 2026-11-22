@@ -4,9 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.firebase.perf.FirebasePerformance
+import com.google.firebase.perf.application.AppStateMonitor
 import com.posthog.PostHog
 import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
+import com.stremio.mobile.auth.FacebookLoginBridge
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -31,6 +34,7 @@ object Telemetry {
     private var userId: String? = null
     private val customKeys = ConcurrentHashMap<String, String>()
     private val crashlytics get() = FirebaseCrashlytics.getInstance()
+    private var isPerformanceStarted = false
 
     @Volatile
     var isEnabled: Boolean = false
@@ -39,12 +43,12 @@ object Telemetry {
     fun init(context: Context, enabled: Boolean) {
         appContext = context.applicationContext
         preferences = appContext.getSharedPreferences("telemetry", Context.MODE_PRIVATE)
-        applyEnabled(enabled)
+        applyEnabled(enabled, atStartup = true)
     }
 
     fun setEnabled(enabled: Boolean) {
         if (enabled == isEnabled) return
-        applyEnabled(enabled)
+        applyEnabled(enabled, atStartup = false)
         if (enabled) {
             syncUser()
             customKeys.forEach { (key, value) -> crashlytics.setCustomKey(key, value) }
@@ -62,11 +66,14 @@ object Telemetry {
         if (isEnabled) crashlytics.setCustomKey(key, value)
     }
 
-    // Firebase SDKs start disabled via AndroidManifest meta-data. The runtime overrides below are persisted by each SDK
-    // and take precedence over the manifest flags on later launches.
-    private fun applyEnabled(enabled: Boolean) {
+    // Crashlytics and Firebase Analytics start disabled via AndroidManifest meta-data. The runtime overrides below are persisted
+    // by each SDK and take precedence over the manifest flags on later launches.
+    private fun applyEnabled(enabled: Boolean, atStartup: Boolean) {
         isEnabled = enabled
         setPostHogEnabled(enabled)
+        setPerformanceEnabled(enabled, atStartup)
+        // The SDK can't be stopped once started, so turning telemetry off takes effect on the next launch.
+        if (enabled) FacebookLoginBridge.startSdk(appContext)
 
         crashlytics.setCrashlyticsCollectionEnabled(enabled)
         // Drops reports finalized from earlier sessions.
@@ -88,6 +95,22 @@ object Telemetry {
             PostHog.close()
             // Events queued but not yet sent must not go out after a later opt-in.
             postHogQueueDir().deleteRecursively()
+        }
+    }
+
+    // Firebase Performance fetches Remote Config even with collection disabled, so it must not be constructed while off. It is
+    // constructed on the first activity resume via AppStateMonitor, so unregistering that at startup keeps it from starting.
+    private fun setPerformanceEnabled(enabled: Boolean, atStartup: Boolean) {
+        when {
+            isPerformanceStarted -> FirebasePerformance.getInstance().setPerformanceCollectionEnabled(enabled)
+            enabled && atStartup -> {
+                // Overrides a persisted false from an earlier in-app opt-out.
+                FirebasePerformance.getInstance().setPerformanceCollectionEnabled(true)
+                isPerformanceStarted = true
+            }
+            // Starting now would upload network metrics the SDK's instrumentation queued in memory while off; starts on next launch.
+            enabled -> Unit
+            else -> AppStateMonitor.getInstance().unregisterActivityLifecycleCallbacks(appContext)
         }
     }
 

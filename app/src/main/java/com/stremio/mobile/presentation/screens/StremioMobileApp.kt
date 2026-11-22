@@ -588,7 +588,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = "To help us improve stability and resolve errors, this open-source client can collect crash reports (via Firebase Crashlytics) and usage metrics (via PostHog and Firebase Analytics). Nothing is collected unless you opt in.",
+                                    text = "To help us improve stability and resolve errors, this open-source client can collect crash reports (via Firebase Crashlytics), usage metrics (via PostHog and Firebase Analytics) and performance metrics (via Firebase Performance). Nothing is collected unless you opt in. The Facebook SDK contacts Facebook only when this is on or when you use Facebook login.",
                                     color = Color.White,
                                     fontSize = 13.sp,
                                     lineHeight = 18.sp

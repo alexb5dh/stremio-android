@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -135,8 +136,8 @@ private fun IntroScreen(
     onSignupClicked: () -> Unit,
 ) {
     val context = LocalContext.current
-    DisposableEffect(onFacebookLogin, onFacebookLoginError) {
-        val callback = object : FacebookCallback<LoginResult> {
+    val facebookCallback = remember(onFacebookLogin, onFacebookLoginError) {
+        object : FacebookCallback<LoginResult> {
             override fun onSuccess(result: LoginResult) {
                 val token = result.accessToken.token
                 if (token.isBlank()) {
@@ -154,9 +155,16 @@ private fun IntroScreen(
                 onFacebookLoginError(error.localizedMessage ?: "Facebook login failed")
             }
         }
-        LoginManager.getInstance().registerCallback(FacebookLoginBridge.callbackManager, callback)
+    }
+    // LoginManager needs a started SDK, which happens on telemetry opt-in or on the login tap below.
+    DisposableEffect(facebookCallback) {
+        if (FacebookLoginBridge.isSdkStarted) {
+            LoginManager.getInstance().registerCallback(FacebookLoginBridge.callbackManager, facebookCallback)
+        }
         onDispose {
-            LoginManager.getInstance().unregisterCallback(FacebookLoginBridge.callbackManager)
+            if (FacebookLoginBridge.isSdkStarted) {
+                LoginManager.getInstance().unregisterCallback(FacebookLoginBridge.callbackManager)
+            }
         }
     }
 
@@ -220,6 +228,8 @@ private fun IntroScreen(
                     if (activity == null) {
                         onFacebookLoginError("Facebook login requires an active app screen.")
                     } else {
+                        FacebookLoginBridge.startSdk(context)
+                        LoginManager.getInstance().registerCallback(FacebookLoginBridge.callbackManager, facebookCallback)
                         LoginManager.getInstance().logInWithReadPermissions(activity, listOf("email"))
                     }
                 },
