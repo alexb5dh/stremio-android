@@ -21,9 +21,11 @@ case "${1:-}" in
     expected=$(keytool -exportcert -keystore "$keystore" -storepass android -alias androiddebugkey | sha256sum | cut -d' ' -f1)
     apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)
     for apk in "$2"/*.apk; do
-      actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+      certs=$("$apksigner" verify --print-certs "$apk")
+      actual=$(sed -n 's/^Signer.* certificate SHA-256 digest: //p' <<< "$certs" | sort -u)
       if [ "$actual" != "$expected" ]; then
-        echo "::error::$apk is signed with $actual, expected the fixed debug key $expected."
+        echo "$certs"
+        echo "::error::$apk is signed with '$actual', expected the fixed debug key $expected."
         exit 1
       fi
     done
