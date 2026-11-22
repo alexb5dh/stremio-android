@@ -594,7 +594,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                                     lineHeight = 18.sp
                                 )
                                 Text(
-                                    text = "Personally identifiable info (PII) such as emails and tokens is scrubbed from logs locally on your device, and session recording is disabled.",
+                                    text = "Personally identifiable info (PII) such as emails and tokens is scrubbed from log messages locally on your device, and session recording is disabled.",
                                     color = MutedText,
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp
@@ -621,7 +621,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             ThemedButton(
-                                text = "Keep Off",
+                                text = "Disable",
                                 onClick = { viewModel.acknowledgeAnalyticsDisclosure(false) },
                                 containerColor = Color(0xFFD32F2F),
                                 modifier = Modifier.weight(1f)

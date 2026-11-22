@@ -223,8 +223,8 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
                         description = "If you opt in, we collect usage telemetry via PostHog and Firebase Analytics, and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance."
                     )
                     PrivacyBulletPoint(
-                        title = "2. Absolute PII Sanitization",
-                        description = "The client runs filters locally on your device to scrub any personally identifiable information (PII) like email addresses, passwords, or authentication tokens from logs and crash details before transmission."
+                        title = "2. PII Scrubbing in Logs",
+                        description = "The client runs filters locally on your device to scrub personally identifiable information (PII) like email addresses, passwords, or authentication tokens from log messages before transmission."
                     )
                     PrivacyBulletPoint(
                         title = "3. No Session Recording",
