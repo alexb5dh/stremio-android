@@ -5,20 +5,30 @@ import android.content.Intent
 import android.net.Uri
 import com.stremio.mobile.core.StremioCore
 import com.stremio.mobile.data.model.LIQUID_GLASS_RECOMMENDED_GLOBAL_ALPHA
-import com.stremio.mobile.data.model.LocalStreamSelection
 import com.stremio.mobile.data.model.LiquidGlassTuning
-import com.stremio.mobile.data.model.StreamOption
 import com.stremio.mobile.core.theme.AppFont
 import com.stremio.mobile.presentation.state.AccountUiState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import org.json.JSONObject
 
 class AuthRepository(
     private val core: StremioCore,
     private val context: Context
 ) {
     private val preferences = context.getSharedPreferences("stremio_account", Context.MODE_PRIVATE)
+
+    init {
+        removeLegacyStreamSelections()
+    }
+
+    /** Drops the stream choices this app saved itself before switching to the core's stream history. */
+    private fun removeLegacyStreamSelections() {
+        val legacyKeys = preferences.all.keys.filter { it.startsWith("local_stream_selection:") }
+        if (legacyKeys.isEmpty()) return
+        val editor = preferences.edit()
+        legacyKeys.forEach(editor::remove)
+        editor.apply()
+    }
 
     // Not in "stremio_account", which logout clears.
     private val serverPreferences = context.getSharedPreferences("streaming_server", Context.MODE_PRIVATE)
@@ -140,43 +150,6 @@ class AuthRepository(
     fun getPreferredQuality(): String = preferences.getString("preferred_quality", "Any") ?: "Any"
     fun setPreferredQuality(value: String) {
         preferences.edit().putString("preferred_quality", value).apply()
-    }
-
-    fun rememberLocalStreamSelection(itemType: String, itemId: String, videoId: String?, option: StreamOption) {
-        val payload = JSONObject()
-            .put("key", option.key)
-            .put("addonTitle", option.addonTitle)
-            .put("name", option.name)
-            .put("description", option.description)
-            .put("quality", option.quality)
-
-        preferences.edit()
-            .putString(localStreamSelectionKey(itemType, itemId, videoId), payload.toString())
-            .apply()
-    }
-
-    fun getLocalStreamSelection(itemType: String, itemId: String, videoId: String?): LocalStreamSelection? {
-        val raw = preferences.getString(localStreamSelectionKey(itemType, itemId, videoId), null) ?: return null
-        return runCatching {
-            val payload = JSONObject(raw)
-            LocalStreamSelection(
-                key = payload.optString("key"),
-                addonTitle = payload.optString("addonTitle"),
-                name = payload.optString("name"),
-                description = payload.optNullableString("description"),
-                quality = payload.optNullableString("quality"),
-            )
-        }.getOrNull()
-    }
-
-    private fun localStreamSelectionKey(itemType: String, itemId: String, videoId: String?): String {
-        val normalizedVideoId = videoId?.takeIf { it.isNotBlank() } ?: itemId
-        return listOf("local_stream_selection", itemType, itemId, normalizedVideoId)
-            .joinToString(":") { Uri.encode(it) }
-    }
-
-    private fun JSONObject.optNullableString(name: String): String? {
-        return if (has(name) && !isNull(name)) optString(name) else null
     }
 
     fun getGlobalUiStyle(): String {

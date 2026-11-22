@@ -471,6 +471,15 @@ class StremioCore(context: Context) {
         return if (streamsHistory.contains(selected.metaPath.id, videoId)) LastUsedMatch.EXACT else LastUsedMatch.SAME_RELEASE
     }
 
+    /** Whether the core is still working out the last used stream: the meta item or the addon that served it hasn't answered yet. */
+    fun isLastUsedStreamPending(details: MetaDetails): Boolean {
+        val content = details.lastUsedStream?.content
+        return content == null || content is LoadableStream.Content.Loading
+    }
+
+    /** Whether a stream was played for [videoId] of [metaId], or for any of its videos when [videoId] is null. */
+    fun hasStreamHistory(metaId: String, videoId: String?): Boolean = streamsHistory.contains(metaId, videoId)
+
     // endregion
 
     // region playback resolution ----------------------------------------------------------------
