@@ -37,6 +37,7 @@ jobs:
       - name: Compile and assemble debug
         run: ./gradlew :app:compileDebugKotlin :app:assembleDebug --warning-mode all
 
+      # Keep the ABI args and the upload steps below in sync with supportedAbis in app/build.gradle.kts
       - name: Verify debug APK outputs
         run: python .github/scripts/verify-apk-outputs.py app/build/outputs/apk/debug armeabi-v7a arm64-v8a x86 x86_64 universal
 
