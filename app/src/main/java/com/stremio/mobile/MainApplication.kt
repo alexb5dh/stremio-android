@@ -16,8 +16,6 @@ import okio.Path.Companion.toPath
 
 import timber.log.Timber
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import com.posthog.android.PostHogAndroid
-import com.posthog.android.PostHogAndroidConfig
 
 class CrashlyticsTree : Timber.Tree() {
     private val emailRegex = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
@@ -67,23 +65,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
             Timber.e(e, "Failed to set TMPDIR environment variable")
         }
         container = AppContainer(this)
-        val analyticsEnabled = container.authRepository.isAnalyticsEnabled()
-
-        if (BuildConfig.POSTHOG_API_KEY.isNotEmpty()) {
-            val posthogConfig = PostHogAndroidConfig(
-                apiKey = BuildConfig.POSTHOG_API_KEY,
-                host = BuildConfig.POSTHOG_HOST
-            ).apply {
-                captureApplicationLifecycleEvents = true
-                captureScreenViews = true
-                sessionReplay = false
-                sessionReplayConfig.maskAllTextInputs = true
-                sessionReplayConfig.maskAllImages = true
-                optOut = !analyticsEnabled
-            }
-            PostHogAndroid.setup(this, posthogConfig)
-        }
-        Telemetry.setEnabled(this, analyticsEnabled)
+        Telemetry.setEnabled(this, container.authRepository.isAnalyticsEnabled())
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
