@@ -10,18 +10,17 @@ import com.posthog.android.PostHogAndroidConfig
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-private const val LOGGED_OUT_MARKER = ""
+internal const val LOGGED_OUT_MARKER = ""
 
-internal data class IdentityChange(val reset: Boolean, val identify: String?, val marker: String)
+internal data class IdentityChange(val reset: Boolean, val identify: String?)
 
 /**
  * Decides how to move PostHog from the last synced identity [identified] to [userId]: `null` when nothing changes.
  * [identified] is `null` when never synced (PostHog may hold an identity from an older app version), [LOGGED_OUT_MARKER] when logged out.
  */
 internal fun identityChange(identified: String?, userId: String?): IdentityChange? {
-    val target = userId ?: LOGGED_OUT_MARKER
-    if (identified == target) return null
-    return IdentityChange(reset = identified != LOGGED_OUT_MARKER, identify = userId, marker = target)
+    if (identified == (userId ?: LOGGED_OUT_MARKER)) return null
+    return IdentityChange(reset = identified != LOGGED_OUT_MARKER, identify = userId)
 }
 
 object Telemetry {
@@ -101,7 +100,7 @@ object Telemetry {
         val change = identityChange(preferences.getString(IDENTIFIED_USER_KEY, null), id) ?: return
         if (change.reset) PostHog.reset()
         change.identify?.let { PostHog.identify(it) }
-        preferences.edit().putString(IDENTIFIED_USER_KEY, change.marker).apply()
+        preferences.edit().putString(IDENTIFIED_USER_KEY, change.identify ?: LOGGED_OUT_MARKER).apply()
     }
 
     private fun isPostHogConfigured() = BuildConfig.POSTHOG_API_KEY.isNotEmpty()
