@@ -19,13 +19,16 @@ fun hasLocalNetworkPermission(context: Context): Boolean =
 fun needsLocalNetworkPermission(context: Context, baseUrl: String): Boolean =
     isLocalNetworkUrl(baseUrl) && !hasLocalNetworkPermission(context)
 
-/** Private, link-local and `.local`/single-label hosts; not Tailscale's `100.x`/`fd7a:115c:a1e0:` VPN addresses. */
+private val localHostSuffixes = listOf(".local", ".lan", ".home", ".home.arpa", ".internal", ".localdomain", ".fritz.box")
+
+/** Private, link-local and home-router (`.local`, `.lan`, single-label...) hosts; not Tailscale's `100.x`/`fd7a:115c:a1e0:` VPN addresses. */
 fun isLocalNetworkUrl(baseUrl: String): Boolean {
     val host = runCatching { URI(baseUrl).host }.getOrNull()?.lowercase()?.removeSurrounding("[", "]") ?: return false
     if (':' in host) {
         return host.startsWith("fe80:") || (host.startsWith("fc") || host.startsWith("fd")) && !host.startsWith("fd7a:115c:a1e0:")
     }
-    if ('.' !in host || host.endsWith(".local")) return true
+    if (host == "localhost") return false
+    if ('.' !in host || localHostSuffixes.any(host::endsWith)) return true
     val octets = host.split('.').map { it.toIntOrNull() ?: return false }
     if (octets.size != 4) return false
     val (a, b) = octets
@@ -57,7 +60,7 @@ suspend fun isStreamingServerReachable(
         } finally {
             connection.disconnect()
         }
-    }.onFailure { Timber.d(it, "Streaming server probe failed") }.getOrDefault(false)
+    }.onFailure { Timber.d("Streaming server probe failed: %s", it) }.getOrDefault(false)
 }
 
 private val leadingZeroOctet = Regex("""(^|\.)0\d""")
@@ -65,7 +68,8 @@ private val leadingZeroOctet = Regex("""(^|\.)0\d""")
 /** [input] as an http(s) base URL in the form stremio-core stores it, or null if invalid. */
 fun parseStreamingServerUrl(input: String): String? {
     val trimmed = input.trim()
-    val withScheme = if ("://" in trimmed || trimmed.isEmpty()) trimmed else "http://$trimmed"
+    val schemeAdded = "://" !in trimmed && trimmed.isNotEmpty()
+    val withScheme = if (schemeAdded) "http://$trimmed" else trimmed
     val uri = runCatching { URI(withScheme).normalize() }.getOrNull() ?: return null
     val scheme = uri.scheme?.lowercase()
     val host = uri.host?.lowercase()
@@ -77,7 +81,8 @@ fun parseStreamingServerUrl(input: String): String? {
     val hasDotSegment = path.startsWith("/..") || path.contains("%2e", ignoreCase = true)
     if (isOctalIpv4 || '%' in host || hasDotSegment) return null
 
-    val port = uri.port
+    // A bare address most likely means Stremio's default port.
+    val port = if (schemeAdded && uri.port == -1) 11470 else uri.port
     if (port == 0 || port > 65535) return null
     val defaultPort = if (scheme == "http") 80 else 443
     val portPart = if (port == -1 || port == defaultPort) "" else ":$port"

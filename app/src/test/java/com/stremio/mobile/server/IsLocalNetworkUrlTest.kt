@@ -19,15 +19,21 @@ class IsLocalNetworkUrlTest {
     fun `local host names are local`() {
         assertTrue(isLocalNetworkUrl("http://mypc:11470"))
         assertTrue(isLocalNetworkUrl("http://mypc.local:11470"))
+        assertTrue(isLocalNetworkUrl("http://mypc.lan:11470"))
+        assertTrue(isLocalNetworkUrl("http://mypc.home:11470"))
+        assertTrue(isLocalNetworkUrl("http://mypc.home.arpa:11470"))
+        assertTrue(isLocalNetworkUrl("http://mypc.internal:11470"))
+        assertTrue(isLocalNetworkUrl("http://mypc.fritz.box:11470"))
     }
 
     @Test
-    fun `public and Tailscale addresses are not local`() {
+    fun `public, loopback and Tailscale addresses are not local`() {
         assertFalse(isLocalNetworkUrl("http://172.32.0.1:11470"))
         assertFalse(isLocalNetworkUrl("http://8.8.8.8:11470"))
         assertFalse(isLocalNetworkUrl("http://100.101.102.103:11470"))
         assertFalse(isLocalNetworkUrl("http://[fd7a:115c:a1e0::1]:11470"))
         assertFalse(isLocalNetworkUrl("http://mypc.tail1234.ts.net:11470"))
         assertFalse(isLocalNetworkUrl("https://stremio.example.com"))
+        assertFalse(isLocalNetworkUrl("http://localhost:11470"))
     }
 }

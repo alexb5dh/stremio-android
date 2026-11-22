@@ -28,7 +28,8 @@ import com.stremio.mobile.server.LOCAL_NETWORK_PERMISSION
 
 /**
  * Returns a function that explains, then asks for, the local network permission and passes on whether it was granted.
- * With [openSettingsIfBlocked], a denial without a dialog (Android stops asking after two) opens the app's system settings.
+ * Dismissing the explanation calls back nothing. With [openSettingsIfBlocked], Continue opens the app's system settings instead
+ * once Android stops showing the dialog (after two denials).
  */
 @Composable
 fun rememberLocalNetworkPermissionRequest(openSettingsIfBlocked: Boolean = false): (onResult: (granted: Boolean) -> Unit) -> Unit {
@@ -41,17 +42,25 @@ fun rememberLocalNetworkPermissionRequest(openSettingsIfBlocked: Boolean = false
         onResult = null
     }
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted && openSettingsIfBlocked && !canShowPermissionDialog(context)) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { finish(it) }
+
+    fun proceed() {
+        showExplanation = false
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        val blocked = preferences.getBoolean(REQUESTED_KEY, false) && !shouldShowRationale(context)
+        if (openSettingsIfBlocked && blocked) {
+            onResult = null
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
+        } else {
+            preferences.edit().putBoolean(REQUESTED_KEY, true).apply()
+            launcher.launch(LOCAL_NETWORK_PERMISSION)
         }
-        finish(granted)
     }
 
     if (showExplanation) {
         val notNow = { showExplanation = false; finish(false) }
         AlertDialog(
-            onDismissRequest = notNow,
+            onDismissRequest = { showExplanation = false; onResult = null },
             title = { Text("Allow Nearby Devices", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
@@ -62,7 +71,7 @@ fun rememberLocalNetworkPermissionRequest(openSettingsIfBlocked: Boolean = false
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showExplanation = false; launcher.launch(LOCAL_NETWORK_PERMISSION) }) {
+                TextButton(onClick = { proceed() }) {
                     Text("Continue", color = AccentPurple, fontWeight = FontWeight.Bold)
                 }
             },
@@ -80,7 +89,11 @@ fun rememberLocalNetworkPermissionRequest(openSettingsIfBlocked: Boolean = false
     }
 }
 
-private fun canShowPermissionDialog(context: Context): Boolean {
-    val activity = context as? Activity ?: return false
+// Not in stremio_account, which logout clears.
+private const val PREFERENCES = "permissions"
+private const val REQUESTED_KEY = "local_network_requested"
+
+private fun shouldShowRationale(context: Context): Boolean {
+    val activity = context as? Activity ?: return true
     return ActivityCompat.shouldShowRequestPermissionRationale(activity, LOCAL_NETWORK_PERMISSION)
 }

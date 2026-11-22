@@ -35,9 +35,11 @@ class ParseStreamingServerUrlTest {
     }
 
     @Test
-    fun `defaults to http when the scheme is missing`() {
+    fun `defaults to http and port 11470 when the scheme is missing`() {
         assertEquals("http://192.168.1.10:11470", parseStreamingServerUrl("192.168.1.10:11470"))
-        assertEquals("http://pc", parseStreamingServerUrl(" pc/ "))
+        assertEquals("http://pc:11470", parseStreamingServerUrl(" pc/ "))
+        assertEquals("http://pc:8080", parseStreamingServerUrl("pc:8080"))
+        assertEquals("http://pc", parseStreamingServerUrl("http://pc"))
     }
 
     @Test

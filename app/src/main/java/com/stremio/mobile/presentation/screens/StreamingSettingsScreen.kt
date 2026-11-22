@@ -34,6 +34,7 @@ import com.stremio.mobile.presentation.components.UrlInputRow
 import com.stremio.mobile.presentation.components.rememberLocalNetworkPermissionRequest
 import com.stremio.mobile.server.StreamingServerState
 import com.stremio.mobile.server.formatServerErrorMessage
+import com.stremio.mobile.server.hasLocalNetworkPermission
 import com.stremio.mobile.server.needsLocalNetworkPermission
 import com.stremio.mobile.server.parseStreamingServerUrl
 
@@ -125,7 +126,7 @@ fun StreamingSettingsScreen(
                 if (usesRemoteServer && serverState is StreamingServerState.Failed) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ThemedButton(text = "Retry", onClick = onRetryServer)
-                        if (needsLocalNetworkPermission(LocalContext.current, customServerUrl)) {
+                        if (!hasLocalNetworkPermission(LocalContext.current)) {
                             val requestLocalNetwork = rememberLocalNetworkPermissionRequest(openSettingsIfBlocked = true)
                             ThemedButton(
                                 text = "Allow Nearby Devices",
@@ -284,17 +285,13 @@ private fun CustomServerCard(
     onSetCustomServer: (enabled: Boolean, url: String) -> Boolean,
 ) {
     var urlInput by rememberSaveable { mutableStateOf(customServerUrl) }
-    var enabled by rememberSaveable { mutableStateOf(isCustomServerEnabled) }
     var urlError by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val requestLocalNetwork = rememberLocalNetworkPermissionRequest()
 
-    // Saving may restart the app, so the permission is asked first; a denial still saves (a VPN address works without it).
+    // Asked before saving, which may restart the app; a denial still saves.
     fun save(newEnabled: Boolean, url: String) {
-        val commit = {
-            urlError = !onSetCustomServer(newEnabled, url)
-            if (!urlError) enabled = newEnabled
-        }
+        val commit = { urlError = !onSetCustomServer(newEnabled, url) }
         val parsedUrl = parseStreamingServerUrl(url)
         if (newEnabled && parsedUrl != null && needsLocalNetworkPermission(context, parsedUrl)) {
             requestLocalNetwork { commit() }
@@ -305,7 +302,7 @@ private fun CustomServerCard(
 
     SettingsToggleRow(
         title = "Use Custom Server",
-        checked = enabled,
+        checked = isCustomServerEnabled,
         // Turning off doesn't save edits in the field.
         onCheckedChange = { checked -> save(checked, if (checked) urlInput else customServerUrl) },
         description = "Stream through a server on another device, e.g. Stremio on your PC, instead of the built-in one. " +
@@ -316,7 +313,7 @@ private fun CustomServerCard(
         onValueChange = { urlInput = it; urlError = false },
         placeholder = "http://192.168.1.10:11470",
         buttonText = "Save",
-        onSubmit = { save(enabled, urlInput) },
+        onSubmit = { save(isCustomServerEnabled, urlInput) },
         errorText = "Enter a valid http(s) URL, e.g. http://192.168.1.10:11470".takeIf { urlError },
     )
 }
