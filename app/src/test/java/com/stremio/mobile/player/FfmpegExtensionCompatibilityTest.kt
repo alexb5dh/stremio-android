@@ -9,12 +9,7 @@ import org.junit.Test
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
-/**
- * The FFmpeg extension is a prebuilt library compiled against an older media3 and is only linked at runtime: DefaultRenderersFactory
- * instantiates its renderers by reflection, and a failure there breaks ExoPlayer creation for every stream. The constructor
- * signatures below are the ones DefaultRenderersFactory looks up as of media3 1.10.1; if a newer media3 looks up different ones,
- * update them here.
- */
+/** The prebuilt extension targets an older media3; DefaultRenderersFactory creates its renderers by reflection (as of 1.10.1). */
 class FfmpegExtensionCompatibilityTest {
     @Test
     fun `audio renderer matches media3`() {
@@ -23,7 +18,7 @@ class FfmpegExtensionCompatibilityTest {
         assertNoUnimplementedAbstractMethods(renderer)
     }
 
-    /** An upstream stub that never plays anything; if a future extension build drops it, delete this test. */
+    /** Upstream stub: delete this test if the extension drops it. */
     @Test
     fun `video renderer matches media3`() {
         val renderer = load("androidx.media3.decoder.ffmpeg.ExperimentalFfmpegVideoRenderer")
@@ -42,7 +37,7 @@ class FfmpegExtensionCompatibilityTest {
         (superclasses(type) + allInterfaces(type)).flatMap { it.declaredMethods.toList() }
             .filter { Modifier.isAbstract(it.modifiers) && !Modifier.isStatic(it.modifiers) }
 
-    /** Matches by name and erased parameter types, so compiler bridge methods and interface defaults count. */
+    /** By name and erased parameters, so bridge methods and interface defaults count. */
     private fun findImplementation(type: Class<*>, abstract: Method): Method? {
         fun Class<*>.concreteMatch() = declaredMethods.firstOrNull {
             it.name == abstract.name && it.parameterTypes.contentEquals(abstract.parameterTypes) && !Modifier.isAbstract(it.modifiers)
