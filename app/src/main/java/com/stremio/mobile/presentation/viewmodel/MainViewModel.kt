@@ -1098,8 +1098,7 @@ class MainViewModel(
                                     )
                                 }
                             }
-                            catalogRepository.extractStreams(details)
-                                .mapIndexed { index, coreStream -> buildStreamOption(index, coreStream) }
+                            streamOptions(details)
                                 .firstOrNull { rememberedSelection.matches(it) }
                         }
                         .first { it != null }
@@ -1174,9 +1173,7 @@ class MainViewModel(
                 val collector = launch {
                     catalogRepository.getMetaDetailsFlow(type = item.type, id = item.id, videoId = null, guessStreamPath = true)
                         .collect { details ->
-                            val options = catalogRepository.extractStreams(details).mapIndexed { index, coreStream ->
-                                buildStreamOption(index, coreStream)
-                            }
+                            val options = streamOptions(details)
                             if (streams.value.isOpen) {
                                 streams.value = streams.value.copy(
                                     streams = options,
@@ -1213,9 +1210,7 @@ class MainViewModel(
             val collector = launch {
                 catalogRepository.getMetaDetailsFlow(type = item.type, id = item.id, videoId = episode.videoId, guessStreamPath = false)
                     .collect { details ->
-                        val options = catalogRepository.extractStreams(details).mapIndexed { index, coreStream ->
-                            buildStreamOption(index, coreStream)
-                        }
+                        val options = streamOptions(details)
                         if (streams.value.isOpen) {
                             streams.value = streams.value.copy(
                                 streams = options,
@@ -1328,6 +1323,9 @@ class MainViewModel(
             timeZone = TimeZone.getDefault()
         }.format(Date(seconds * 1000L))
     }
+
+    private fun streamOptions(details: com.stremio.core.models.MetaDetails): List<StreamOption> =
+        catalogRepository.extractStreams(details).mapIndexed(::buildStreamOption)
 
     private fun buildStreamOption(index: Int, coreStream: CoreStream): StreamOption {
         val rawDescription = coreStream.stream.description?.takeIf { it.isNotBlank() }
@@ -1603,9 +1601,7 @@ class MainViewModel(
             val collector = launch {
                 catalogRepository.getMetaDetailsFlow(type = item.type, id = item.id, videoId = video.id, guessStreamPath = false)
                     .collect { details ->
-                        val options = catalogRepository.extractStreams(details).mapIndexed { index, coreStream ->
-                            buildStreamOption(index, coreStream)
-                        }
+                        val options = streamOptions(details)
                         if (options.isNotEmpty()) {
                             val preferred = lastPlayedOption?.let { last ->
                                 options.firstOrNull { it.addonTitle == last.addonTitle }

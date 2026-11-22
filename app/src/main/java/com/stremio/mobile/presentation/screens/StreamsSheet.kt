@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Storage
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.stremio.mobile.core.LastUsedMatch
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
@@ -251,7 +253,7 @@ fun StreamsSheet(
                             .filter { state.selectedProvider == null || it.addonTitle == state.selectedProvider }
                             .let { filtered ->
                                 when (state.sortCriterion) {
-                                    StreamSortCriterion.DEFAULT -> filtered
+                                    StreamSortCriterion.DEFAULT -> filtered.sortedByDescending { it.lastUsed != null }
                                     StreamSortCriterion.SEEDS -> filtered.sortedByDescending { parseSeedCount(it.seeds) }
                                     StreamSortCriterion.SIZE -> filtered.sortedByDescending { parseSizeBytes(it.size) }
                                     StreamSortCriterion.QUALITY -> filtered.sortedByDescending { qualityScore(it.quality, preferredQuality) }
@@ -283,7 +285,17 @@ fun StreamsSheet(
                         }
                     }
 
+                    val streamsListState = rememberLazyListState()
+                    val pinnedKey = visibleStreams.firstOrNull()?.takeIf { it.lastUsed != null }?.key
+                    // A keyed list keeps the previous first row in view when a row moves above it, hiding the pinned one.
+                    LaunchedEffect(pinnedKey) {
+                        if (pinnedKey != null && streamsListState.firstVisibleItemIndex <= 1) {
+                            streamsListState.scrollToItem(0)
+                        }
+                    }
+
                     LazyColumn(
+                        state = streamsListState,
                         contentPadding = PaddingValues(bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
@@ -481,13 +493,14 @@ private fun StreamRow(
                 )
             }
             
-            // Metadata Badges Row (Seeds, Size, Origin)
-            if (option.seeds != null || option.size != null || option.origin != null) {
+            // Metadata Badges Row (Last used, Seeds, Size, Origin)
+            if (option.lastUsed != null || option.seeds != null || option.size != null || option.origin != null) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    option.lastUsed?.let { LastUsedBadge(it) }
                     option.seeds?.let { s ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -563,6 +576,35 @@ private fun StreamRow(
         }
     }
 }
+}
+
+@Composable
+private fun LastUsedBadge(match: LastUsedMatch) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(AccentPurple)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.History,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(12.dp)
+        )
+        Text(
+            text = when (match) {
+                LastUsedMatch.EXACT -> "Last watched"
+                LastUsedMatch.SAME_RELEASE -> "Same release"
+            },
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+    }
 }
 
 @Composable
