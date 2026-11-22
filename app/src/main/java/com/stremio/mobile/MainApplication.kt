@@ -31,7 +31,7 @@ class CrashlyticsTree : Timber.Tree() {
     }
 
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-        if (priority == android.util.Log.VERBOSE || priority == android.util.Log.DEBUG) {
+        if (!Telemetry.isEnabled || priority == android.util.Log.VERBOSE || priority == android.util.Log.DEBUG) {
             return
         }
         val crashlytics = FirebaseCrashlytics.getInstance()
@@ -65,7 +65,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
             Timber.e(e, "Failed to set TMPDIR environment variable")
         }
         container = AppContainer(this)
-        Telemetry.setEnabled(this, container.authRepository.isAnalyticsEnabled())
+        Telemetry.init(this, container.authRepository.isAnalyticsEnabled())
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
