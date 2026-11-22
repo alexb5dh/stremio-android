@@ -11,6 +11,7 @@ import com.stremio.core.runtime.msg.Event
 import com.stremio.mobile.core.CoreStream
 import com.stremio.mobile.core.LastUsedMatch
 import com.stremio.mobile.core.StremioCore
+import com.stremio.mobile.core.isLastUsedStreamPending
 import com.stremio.mobile.core.utils.parseStreamDescription
 import com.stremio.mobile.data.model.*
 import com.stremio.mobile.data.repository.*
@@ -44,6 +45,7 @@ import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +54,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -1061,36 +1064,34 @@ class MainViewModel(
 
     fun openStreams(item: CatalogItem) {
         streamsJob?.cancel()
-        if (hasContinueWatchingStreamHistory(item)) {
-            openLastWatchedContinueWatchingStream(item)
+        val isSeries = item.type == "series"
+        val videoId = if (isSeries) item.continueWatchingVideoId?.takeIf { it.isNotBlank() } else null
+        val canResume = item.isContinueWatching && (!isSeries || videoId != null) && catalogRepository.hasStreamHistory(item.id, videoId)
+        if (canResume) {
+            openLastWatchedContinueWatchingStream(item, videoId)
             return
         }
 
         streamsJob = launchStreamsMenuJob(item)
     }
 
-    private fun hasContinueWatchingStreamHistory(item: CatalogItem): Boolean {
-        if (!item.isContinueWatching) return false
-        if (item.type != "series") return catalogRepository.hasStreamHistory(item.id, videoId = null)
-        val videoId = item.continueWatchingVideoId?.takeIf { it.isNotBlank() } ?: return false
-        return catalogRepository.hasStreamHistory(item.id, videoId)
-    }
-
-    /** Resumes the stream last watched for the item's video, or opens the streams menu if the core has no exact match. */
-    private fun openLastWatchedContinueWatchingStream(item: CatalogItem) {
+    /**
+     * Resumes the stream last watched for the item's [videoId] (null for movies), or opens the streams menu if the core has no
+     * exact match.
+     */
+    private fun openLastWatchedContinueWatchingStream(item: CatalogItem, videoId: String?) {
         val isSeries = item.type == "series"
         streams.value = StreamsUiState(
             forItem = item,
             isOpen = false,
             isLoading = true,
             isSeries = isSeries,
-            selectedVideoId = if (isSeries) item.continueWatchingVideoId else null,
+            selectedVideoId = videoId,
         )
 
         streamsJob = viewModelScope.launch {
             runCatching { startServerInternal() }
 
-            val videoId = if (isSeries) item.continueWatchingVideoId else null
             val matchedOption = runCatching {
                 withTimeoutOrNull(30_000) {
                     catalogRepository.getMetaDetailsFlow(
@@ -1109,10 +1110,12 @@ class MainViewModel(
                                 }
                             }
                         }
-                        .first { isSelected(it, item.id, videoId) && !catalogRepository.isLastUsedStreamPending(it) }
+                        .first { isSelected(it, item.id, videoId) && !isLastUsedStreamPending(it) }
                         .let { details -> streamOptions(details).firstOrNull { it.lastUsed == LastUsedMatch.EXACT } }
                 }
             }.getOrNull()
+            // runCatching also catches the cancellation of this job: don't reopen this item's menu over the next one.
+            ensureActive()
 
             if (matchedOption != null) {
                 playStream(matchedOption)
@@ -1597,14 +1600,14 @@ class MainViewModel(
             val picked = withTimeoutOrNull(30_000) {
                 catalogRepository.getMetaDetailsFlow(type = item.type, id = item.id, videoId = video.id, guessStreamPath = false)
                     .filter { isSelected(it, item.id, video.id) }
-                    .map { details ->
+                    .mapNotNull { details ->
                         latestOptions = streamOptions(details)
                         latestOptions.firstOrNull { it.lastUsed != null }
                             ?: latestOptions
-                                .takeIf { it.isNotEmpty() && !catalogRepository.isLastUsedStreamPending(details) }
+                                .takeIf { it.isNotEmpty() && !isLastUsedStreamPending(details) }
                                 ?.let(::sameAddonOrFirstStream)
                     }
-                    .first { it != null }
+                    .first()
             } ?: latestOptions.takeIf { it.isNotEmpty() }?.let(::sameAddonOrFirstStream)
             picked?.let(::playStream)
         }

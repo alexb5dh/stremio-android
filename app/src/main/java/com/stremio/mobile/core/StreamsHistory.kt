@@ -5,48 +5,56 @@ import org.json.JSONObject
 import timber.log.Timber
 
 /**
- * Reads which videos stremio-core has a played stream for. The core keeps this history (its `StreamsBucket`) in [storage]
+ * Reads which stream stremio-core last played for each video. The core keeps this history (its `StreamsBucket`) in [storage]
  * but doesn't expose it in any model.
  */
 class StreamsHistory(private val storage: Storage) {
     private var cachedRaw: String? = null
-    private var cachedVideoIds: Map<String, Set<String>> = emptyMap()
+    private var cachedEntries: Map<String, Map<String, PlayedStream>> = emptyMap()
 
     /** Whether a stream was played for [videoId] of [metaId], or for any of its videos when [videoId] is null. */
     fun contains(metaId: String, videoId: String?): Boolean {
-        val videoIds = videoIdsByMetaId()[metaId] ?: return false
-        return videoId == null || videoId in videoIds
+        val videos = entries()[metaId] ?: return false
+        return videoId == null || videoId in videos
     }
 
+    fun playedStream(metaId: String, videoId: String): PlayedStream? = entries()[metaId]?.get(videoId)
+
     @Synchronized
-    private fun videoIdsByMetaId(): Map<String, Set<String>> {
+    private fun entries(): Map<String, Map<String, PlayedStream>> {
         val raw = (storage.get(STORAGE_KEY) as? Storage.Result.Ok)?.value
         if (raw != cachedRaw) {
-            cachedVideoIds = parse(raw)
+            cachedEntries = parse(raw)
             cachedRaw = raw
         }
-        return cachedVideoIds
+        return cachedEntries
     }
 
     companion object {
         /** `STREAMS_STORAGE_KEY` in stremio-core. */
         const val STORAGE_KEY = "streams"
 
-        /** Parses the serialized `StreamsBucket`: `{"uid": ..., "items": [[{"metaId", "videoId"}, item], ...]}`. */
-        fun parse(raw: String?): Map<String, Set<String>> {
+        /**
+         * Parses the serialized `StreamsBucket` into entries per meta and video id:
+         * `{"uid": ..., "items": [[{"metaId", "videoId"}, {"stream": {...}, ...}], ...]}`. Malformed entries are skipped.
+         */
+        fun parse(raw: String?): Map<String, Map<String, PlayedStream>> {
             if (raw.isNullOrBlank()) return emptyMap()
-            return runCatching {
-                val items = JSONObject(raw).getJSONArray("items")
-                val result = mutableMapOf<String, MutableSet<String>>()
-                for (index in 0 until items.length()) {
-                    val key = items.getJSONArray(index).getJSONObject(0)
-                    result.getOrPut(key.getString("metaId")) { mutableSetOf() }.add(key.getString("videoId"))
-                }
-                result
-            }.getOrElse {
+            val items = runCatching { JSONObject(raw).getJSONArray("items") }.getOrElse {
                 Timber.w(it, "Failed to parse the core's stream history")
-                emptyMap()
+                return emptyMap()
             }
+            val result = mutableMapOf<String, MutableMap<String, PlayedStream>>()
+            for (index in 0 until items.length()) {
+                runCatching {
+                    val entry = items.getJSONArray(index)
+                    val key = entry.getJSONObject(0)
+                    val stream = entry.getJSONObject(1).getJSONObject("stream")
+                    result.getOrPut(key.getString("metaId")) { mutableMapOf() }[key.getString("videoId")] =
+                        PlayedStream(streamSourceKey(stream))
+                }.onFailure { Timber.w(it, "Skipping a malformed stream history entry") }
+            }
+            return result
         }
     }
 }

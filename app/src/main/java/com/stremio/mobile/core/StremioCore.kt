@@ -7,7 +7,6 @@ import com.stremio.core.Field
 import com.stremio.core.models.Ctx
 import com.stremio.core.models.LoadableConvertedStream
 import com.stremio.core.models.LoadableMetaItem
-import com.stremio.core.models.LoadableStream
 import com.stremio.core.models.LoadableStreams
 import com.stremio.core.models.MetaDetails
 import com.stremio.core.models.Player
@@ -50,15 +49,6 @@ data class CoreStream(
     val addonTitle: String,
     val lastUsed: LastUsedMatch? = null,
 )
-
-/** Why the core picked a stream as the last used one (`MetaDetails.last_used_stream`). */
-enum class LastUsedMatch {
-    /** This stream was played for the selected video. */
-    EXACT,
-
-    /** The selected video wasn't played; this stream matches the one played for an earlier episode. */
-    SAME_RELEASE,
-}
 
 /** The user's global subtitle preferences, persisted on the core profile. */
 data class SubtitlePrefs(
@@ -436,45 +426,32 @@ class StremioCore(context: Context) {
         return if (content is LoadableMetaItem.Content.Ready) content.value.videos else emptyList()
     }
 
-    /**
-     * Flattens every addon's ready streams into [CoreStream]s, tagging each with its origin and the first one matching the core's
-     * last used stream with [CoreStream.lastUsed].
-     */
+    /** Flattens every addon's ready streams into [CoreStream]s, tagging each with its origin and the core's last used one. */
     fun extractStreams(details: MetaDetails): List<CoreStream> {
         val metaRequest = details.metaItem?.request
-        val lastUsed = (details.lastUsedStream?.content as? LoadableStream.Content.Ready)?.value?.stream
-        var lastUsedMatch = lastUsed?.let { lastUsedMatch(details) }
-        return details.streams.flatMap { loadable: LoadableStreams ->
+        val streams = details.streams.flatMap { loadable: LoadableStreams ->
             val content = loadable.content
             if (content is LoadableStreams.Content.Ready) {
                 content.value.streams.map { stream ->
-                    val match = lastUsedMatch?.takeIf { stream == lastUsed && loadable.request == details.lastUsedStream?.request }
-                    if (match != null) lastUsedMatch = null
                     CoreStream(
                         stream = stream,
                         streamRequest = loadable.request,
                         metaRequest = metaRequest,
                         addonTitle = loadable.title,
-                        lastUsed = match,
                     )
                 }
             } else {
                 emptyList()
             }
         }
+        return tagLastUsed(streams, details.lastUsedStream) { pick -> lastUsedMatch(pick, playedStream(details)) }
     }
 
-    /** The core's last used stream is exact when the stream history has an entry for the selected video itself. */
-    private fun lastUsedMatch(details: MetaDetails): LastUsedMatch {
-        val selected = details.selected ?: return LastUsedMatch.SAME_RELEASE
-        val videoId = selected.streamPath?.id ?: return LastUsedMatch.SAME_RELEASE
-        return if (streamsHistory.contains(selected.metaPath.id, videoId)) LastUsedMatch.EXACT else LastUsedMatch.SAME_RELEASE
-    }
-
-    /** Whether the core is still working out the last used stream: the meta item or the addon that served it hasn't answered yet. */
-    fun isLastUsedStreamPending(details: MetaDetails): Boolean {
-        val content = details.lastUsedStream?.content
-        return content == null || content is LoadableStream.Content.Loading
+    /** The stream history entry for the selected video. */
+    private fun playedStream(details: MetaDetails): PlayedStream? {
+        val selected = details.selected ?: return null
+        val videoId = selected.streamPath?.id ?: return null
+        return streamsHistory.playedStream(selected.metaPath.id, videoId)
     }
 
     /** Whether a stream was played for [videoId] of [metaId], or for any of its videos when [videoId] is null. */

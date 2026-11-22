@@ -554,7 +554,9 @@ private fun StreamRow(
                                 text = o,
                                 color = MutedText,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

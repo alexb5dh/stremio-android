@@ -3,15 +3,16 @@ package com.stremio.mobile.core
 import com.stremio.core.Storage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StreamsHistoryTest {
-    private fun item(metaId: String, videoId: String) = """
+    private fun item(metaId: String, videoId: String, source: String = """"infoHash":"0123456789ABCDEF0123456789abcdef01234567","fileIdx":1""") = """
         [
             {"metaId":"$metaId","videoId":"$videoId"},
             {
-                "stream":{"infoHash":"0123456789abcdef0123456789abcdef01234567","fileIdx":1,"name":"Addon 1080p"},
+                "stream":{$source,"name":"Addon 1080p","behaviorHints":{"bingeGroup":"addon|1080p"}},
                 "type":"series","metaId":"$metaId","videoId":"$videoId",
                 "metaTransportUrl":"https://v3-cinemeta.strem.io/manifest.json",
                 "streamTransportUrl":"https://addon.example/manifest.json",
@@ -20,8 +21,14 @@ class StreamsHistoryTest {
         ]
     """
 
+    private val torrentKey = "torrent:0123456789abcdef0123456789abcdef01234567:1"
+
     private val bucket = """
-        {"uid":"user","items":[${item("tt1", "tt1:1:1")},${item("tt1", "tt1:1:2")},${item("tt2", "tt2")}]}
+        {"uid":"user","items":[
+            ${item("tt1", "tt1:1:1")},
+            ${item("tt1", "tt1:1:2", """"url":"https://cdn.example/video.mp4"""")},
+            ${item("tt2", "tt2", """"rarUrls":[{"url":"https://cdn.example/a.rar"}],"fileIdx":null""")}
+        ]}
     """
 
     private class FakeStorage(var value: String?) : Storage {
@@ -32,18 +39,38 @@ class StreamsHistoryTest {
     }
 
     @Test
-    fun `parses video ids per meta id`() {
+    fun `parses the played stream's source per meta and video id`() {
         assertEquals(
-            mapOf("tt1" to setOf("tt1:1:1", "tt1:1:2"), "tt2" to setOf("tt2")),
+            mapOf(
+                "tt1" to mapOf(
+                    "tt1:1:1" to PlayedStream(torrentKey),
+                    "tt1:1:2" to PlayedStream("url:https://cdn.example/video.mp4"),
+                ),
+                "tt2" to mapOf("tt2" to PlayedStream(null)),
+            ),
             StreamsHistory.parse(bucket),
         )
     }
 
     @Test
+    fun `reads a missing torrent file index as null, not 0`() {
+        val entries = StreamsHistory.parse(
+            """{"uid":null,"items":[${item("tt3", "tt3", """"infoHash":"0123456789abcdef0123456789abcdef01234567","fileIdx":null""")}]}""",
+        )
+        assertEquals(PlayedStream("torrent:0123456789abcdef0123456789abcdef01234567:"), entries["tt3"]?.get("tt3"))
+    }
+
+    @Test
+    fun `skips malformed entries and keeps the rest`() {
+        val entries = StreamsHistory.parse("""{"uid":null,"items":[[{"metaId":"tt9"}],"junk",${item("tt1", "tt1:1:1")}]}""")
+        assertEquals(mapOf("tt1" to mapOf("tt1:1:1" to PlayedStream(torrentKey))), entries)
+    }
+
+    @Test
     fun `treats missing or malformed data as empty`() {
-        assertEquals(emptyMap<String, Set<String>>(), StreamsHistory.parse(null))
-        assertEquals(emptyMap<String, Set<String>>(), StreamsHistory.parse("""{"uid":null,"items":[]}"""))
-        assertEquals(emptyMap<String, Set<String>>(), StreamsHistory.parse("not json"))
+        assertEquals(emptyMap<String, Any>(), StreamsHistory.parse(null))
+        assertEquals(emptyMap<String, Any>(), StreamsHistory.parse("""{"uid":null,"items":[]}"""))
+        assertEquals(emptyMap<String, Any>(), StreamsHistory.parse("not json"))
     }
 
     @Test
@@ -54,10 +81,12 @@ class StreamsHistoryTest {
         assertFalse(history.contains("tt1", "tt1:1:3"))
         assertTrue(history.contains("tt1", null))
         assertFalse(history.contains("tt3", null))
+        assertEquals(PlayedStream(torrentKey), history.playedStream("tt1", "tt1:1:1"))
+        assertNull(history.playedStream("tt1", "tt1:1:3"))
     }
 
     @Test
-    fun `contains sees storage updates`() {
+    fun `sees storage updates`() {
         val storage = FakeStorage(null)
         val history = StreamsHistory(storage)
         assertFalse(history.contains("tt2", "tt2"))

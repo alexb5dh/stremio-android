@@ -83,8 +83,6 @@ class CatalogRepository(private val core: StremioCore) {
 
     fun extractStreams(details: com.stremio.core.models.MetaDetails) = core.extractStreams(details)
 
-    fun isLastUsedStreamPending(details: com.stremio.core.models.MetaDetails) = core.isLastUsedStreamPending(details)
-
     fun hasStreamHistory(metaId: String, videoId: String?) = core.hasStreamHistory(metaId, videoId)
 
     fun directUrl(stream: com.stremio.core.types.resource.Stream): String? = core.directUrl(stream)

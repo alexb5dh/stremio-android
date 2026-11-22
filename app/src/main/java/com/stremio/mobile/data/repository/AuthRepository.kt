@@ -16,6 +16,8 @@ class AuthRepository(
     private val context: Context
 ) {
     private val preferences = context.getSharedPreferences("stremio_account", Context.MODE_PRIVATE)
+    // Not in "stremio_account", which logout clears.
+    private val serverPreferences = context.getSharedPreferences("streaming_server", Context.MODE_PRIVATE)
 
     init {
         removeLegacyStreamSelections()
@@ -29,9 +31,6 @@ class AuthRepository(
         legacyKeys.forEach(editor::remove)
         editor.apply()
     }
-
-    // Not in "stremio_account", which logout clears.
-    private val serverPreferences = context.getSharedPreferences("streaming_server", Context.MODE_PRIVATE)
 
     fun getSelectedFont(): AppFont {
         val name = preferences.getString("selected_font", AppFont.PLUS_JAKARTA_SANS.name) ?: AppFont.PLUS_JAKARTA_SANS.name
