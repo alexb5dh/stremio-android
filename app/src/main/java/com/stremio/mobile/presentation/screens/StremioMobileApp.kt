@@ -588,19 +588,19 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = "To help us improve stability and resolve errors, this open-source client collects anonymous crash reports (via Firebase Crashlytics) and usage metrics (via PostHog).",
+                                    text = "To help us improve stability and resolve errors, this open-source client can collect crash reports (via Firebase Crashlytics), performance traces (via Firebase Performance) and usage metrics (via PostHog and Firebase Analytics). Nothing is collected unless you opt in.",
                                     color = Color.White,
                                     fontSize = 13.sp,
                                     lineHeight = 18.sp
                                 )
                                 Text(
-                                    text = "All personally identifiable info (PII) is automatically scrubbed locally on your device, and session recordings mask all text fields and image content.",
+                                    text = "Personally identifiable info (PII) such as emails and tokens is scrubbed from logs locally on your device, and session recording is disabled.",
                                     color = MutedText,
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "Stremio separate analytics notice:\nNote that the official Stremio backend services, addons, or streaming server core run independently and may collect separate telemetry from this app.",
+                                    text = "Stremio separate analytics notice:\nThe built-in Stremio core sends Stremio's own usage events to the Stremio API when you sign in or out, regardless of this setting. Addons and stream providers run independently and may collect separate telemetry.",
                                     color = MutedText,
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp,

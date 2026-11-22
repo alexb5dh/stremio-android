@@ -88,13 +88,13 @@ fun AndroidSettingsScreen(
             title = "Share Diagnostics & Analytics",
             checked = isAnalyticsEnabled,
             onCheckedChange = onSetAnalyticsEnabled,
-            description = "Help improve the app by sharing anonymous crash reports and usage statistics"
+            description = "Help improve the app by sharing crash reports and usage statistics (off by default)"
         )
 
         SettingsClickRow(
             title = "Privacy & Analytics Disclosure",
             onClick = onShowAnalyticsDisclosure,
-            description = "Read disclosure about how anonymous crash reports and usage statistics are processed"
+            description = "Read disclosure about how crash reports and usage statistics are processed"
         )
     }
 }
