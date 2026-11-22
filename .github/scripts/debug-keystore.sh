@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Signs CI debug builds with a fixed key from the DEBUG_KEYSTORE_BASE64 secret, so newer builds install over older ones.
 # The keystore must use the default debug credentials (store/key password "android", alias "androiddebugkey").
-#   debug-keystore.sh install           - put the keystore where the Android Gradle plugin looks for it
+#   debug-keystore.sh install           - put the keystore into ANDROID_USER_HOME and export that for later steps
 #   debug-keystore.sh verify <apk-dir>  - fail if any APK in <apk-dir> is not signed with that keystore
 set -euo pipefail
 
-keystore="${ANDROID_USER_HOME:-$HOME/.android}/debug.keystore"
+# Set explicitly: AGP 9 on Linux defaults to ~/.config/.android rather than ~/.android.
+android_user_home="${ANDROID_USER_HOME:-$HOME/.android}"
+keystore="$android_user_home/debug.keystore"
 
 if [ -z "${DEBUG_KEYSTORE_BASE64:-}" ]; then
   echo "::notice::DEBUG_KEYSTORE_BASE64 is not set; debug APKs are signed with a random per-run key."
@@ -16,6 +18,7 @@ case "${1:-}" in
   install)
     mkdir -p "$(dirname "$keystore")"
     printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+    echo "ANDROID_USER_HOME=$android_user_home" >> "$GITHUB_ENV"
     ;;
   verify)
     expected=$(keytool -exportcert -keystore "$keystore" -storepass android -alias androiddebugkey | sha256sum | cut -d' ' -f1)
