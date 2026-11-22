@@ -137,9 +137,12 @@ dependencies {
 
     implementation(files("libs/rustls-platform-verifier-0.1.1.aar"))
 
-    implementation("androidx.media3:media3-exoplayer:1.10.1")
-    implementation("androidx.media3:media3-ui:1.10.1")
-    implementation("androidx.media3:media3-session:1.10.1")
+    // When bumping, re-check media3-ffmpeg-decoder below: it is built against media3 1.9.0 and only linked at runtime
+    // (FfmpegExtensionCompatibilityTest covers the reflective entry points).
+    val media3Version = "1.10.1"
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("androidx.media3:media3-session:$media3Version")
     // Software audio decoders (E-AC3, DTS, TrueHD...) for devices without a MediaCodec one. Jellyfin's prebuilt
     // targets media3 1.9.0 but only uses APIs unchanged in 1.10.1 (Jellyfin's own app ships it with media3 1.11.1).
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")

@@ -83,7 +83,7 @@ class ExoStreamPlayer(
                     .build()
             }
         }.setEnableDecoderFallback(true)
-            // Platform decoders and passthrough stay first; FFmpeg only takes formats none of them can play.
+            // Platform decoders and passthrough keep priority; FFmpeg only gets tracks they don't fully support.
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         if (!hardwareDecoding) {
