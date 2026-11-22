@@ -47,8 +47,6 @@ jobs:
         run: python .github/scripts/verify-apk-outputs.py app/build/outputs/apk/debug armeabi-v7a arm64-v8a x86 x86_64 universal
 
       - name: Verify debug APK signature
-        env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: bash .github/scripts/debug-keystore.sh verify app/build/outputs/apk/debug
 
       - name: Upload debug APKs
