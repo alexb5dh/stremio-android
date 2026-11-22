@@ -16,6 +16,7 @@ class AuthRepository(
     private val context: Context
 ) {
     private val preferences = context.getSharedPreferences("stremio_account", Context.MODE_PRIVATE)
+
     // Not in "stremio_account", which logout clears.
     private val serverPreferences = context.getSharedPreferences("streaming_server", Context.MODE_PRIVATE)
 

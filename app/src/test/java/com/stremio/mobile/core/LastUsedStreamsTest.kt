@@ -66,7 +66,8 @@ class LastUsedStreamsTest {
         assertEquals(LastUsedMatch.SAME_RELEASE, lastUsedMatch(pick, played = null))
         assertEquals(LastUsedMatch.EXACT, lastUsedMatch(pick, PlayedStream(streamSourceKey(pick))))
         assertEquals(LastUsedMatch.SAME_RELEASE, lastUsedMatch(pick, PlayedStream("torrent:0123456789abcdef0123456789abcdef01234567:3")))
-        assertEquals(LastUsedMatch.EXACT, lastUsedMatch(pick, PlayedStream(sourceKey = null)))
+        assertEquals(LastUsedMatch.SAME_RELEASE, lastUsedMatch(pick, PlayedStream(sourceKey = null)))
+        assertEquals(LastUsedMatch.EXACT, lastUsedMatch(stream(Stream.Source.Rar(Stream.Rar())), PlayedStream(sourceKey = null)))
     }
 
     @Test
@@ -90,7 +91,7 @@ class LastUsedStreamsTest {
 
     @Test
     fun `archives have no source key`() {
-        assertNull(streamSourceKey(JSONObject("""{"rarUrls":[{"url":"https://cdn.example/a.rar"}],"fileIdx":null}""")))
+        assertNull(streamSourceKey(JSONObject("""{"rarUrls":[["https://cdn.example/a.rar"]],"fileIdx":null}""")))
         assertNull(streamSourceKey(stream(Stream.Source.Rar(Stream.Rar()))))
     }
 

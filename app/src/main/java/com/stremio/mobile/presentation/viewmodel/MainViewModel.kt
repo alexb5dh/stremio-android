@@ -1101,7 +1101,7 @@ class MainViewModel(
                         guessStreamPath = !isSeries,
                     )
                         .onEach { details ->
-                            if (isSeries && videoId != null) {
+                            if (videoId != null) {
                                 episodeDisplayInfo(details, videoId)?.let { episode ->
                                     streams.value = streams.value.copy(
                                         selectedEpisodeLabel = episode.label,

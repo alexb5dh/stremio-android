@@ -27,7 +27,7 @@ class StreamsHistoryTest {
         {"uid":"user","items":[
             ${item("tt1", "tt1:1:1")},
             ${item("tt1", "tt1:1:2", """"url":"https://cdn.example/video.mp4"""")},
-            ${item("tt2", "tt2", """"rarUrls":[{"url":"https://cdn.example/a.rar"}],"fileIdx":null""")}
+            ${item("tt2", "tt2", """"rarUrls":[["https://cdn.example/a.rar"]],"fileIdx":null""")}
         ]}
     """
 

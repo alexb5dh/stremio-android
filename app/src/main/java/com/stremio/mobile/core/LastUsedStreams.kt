@@ -30,13 +30,10 @@ fun tagLastUsed(streams: List<CoreStream>, pick: LoadableStream?, match: (Stream
 
 /**
  * The core picks the played stream by source and falls back to one with the same binge group, so an existing history entry
- * alone doesn't make [pick] the played stream. Source kinds without a key (archives, NZB) can only be checked by the entry.
+ * alone doesn't make [pick] the played stream.
  */
-fun lastUsedMatch(pick: Stream, played: PlayedStream?): LastUsedMatch = when {
-    played == null -> LastUsedMatch.SAME_RELEASE
-    played.sourceKey == null || played.sourceKey == streamSourceKey(pick) -> LastUsedMatch.EXACT
-    else -> LastUsedMatch.SAME_RELEASE
-}
+fun lastUsedMatch(pick: Stream, played: PlayedStream?): LastUsedMatch =
+    if (played != null && played.sourceKey == streamSourceKey(pick)) LastUsedMatch.EXACT else LastUsedMatch.SAME_RELEASE
 
 /**
  * Whether the core may still produce the last used stream: the addon that served it, or the meta item it needs, is loading.
