@@ -588,7 +588,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = "To help us improve stability and resolve errors, this open-source client can collect crash reports (via Firebase Crashlytics), performance traces (via Firebase Performance) and usage metrics (via PostHog and Firebase Analytics). Nothing is collected unless you opt in.",
+                                    text = "To help us improve stability and resolve errors, this open-source client can collect crash reports (via Firebase Crashlytics) and usage metrics (via PostHog and Firebase Analytics). Nothing is collected unless you opt in.",
                                     color = Color.White,
                                     fontSize = 13.sp,
                                     lineHeight = 18.sp
@@ -621,13 +621,13 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             ThemedButton(
-                                text = "Opt Out",
+                                text = "Keep Off",
                                 onClick = { viewModel.acknowledgeAnalyticsDisclosure(false) },
                                 containerColor = Color(0xFFD32F2F),
                                 modifier = Modifier.weight(1f)
                             )
                             ThemedButton(
-                                text = "Accept",
+                                text = "Enable",
                                 onClick = { viewModel.acknowledgeAnalyticsDisclosure(true) },
                                 containerColor = AccentPurple,
                                 modifier = Modifier.weight(1f)

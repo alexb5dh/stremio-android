@@ -220,7 +220,7 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
                     
                     PrivacyBulletPoint(
                         title = "1. Analytics & Diagnostics",
-                        description = "If you opt in, we collect usage telemetry via PostHog and Firebase Analytics, performance traces via Firebase Performance, and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance."
+                        description = "If you opt in, we collect usage telemetry via PostHog and Firebase Analytics, and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance."
                     )
                     PrivacyBulletPoint(
                         title = "2. Absolute PII Sanitization",
