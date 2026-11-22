@@ -19,25 +19,19 @@ class FfmpegExtensionCompatibilityTest {
     @Test
     fun `audio renderer matches media3`() {
         val renderer = load("androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer")
-        assertPublicConstructor(renderer, Handler::class.java, AudioRendererEventListener::class.java, AudioSink::class.java)
+        renderer.getConstructor(Handler::class.java, AudioRendererEventListener::class.java, AudioSink::class.java)
         assertNoUnimplementedAbstractMethods(renderer)
     }
 
+    /** An upstream stub that never plays anything; if a future extension build drops it, delete this test. */
     @Test
     fun `video renderer matches media3`() {
         val renderer = load("androidx.media3.decoder.ffmpeg.ExperimentalFfmpegVideoRenderer")
-        assertPublicConstructor(
-            renderer, Long::class.java, Handler::class.java, VideoRendererEventListener::class.java, Int::class.java
-        )
+        renderer.getConstructor(Long::class.java, Handler::class.java, VideoRendererEventListener::class.java, Int::class.java)
         assertNoUnimplementedAbstractMethods(renderer)
     }
 
     private fun load(name: String): Class<*> = Class.forName(name, false, javaClass.classLoader)
-
-    private fun assertPublicConstructor(type: Class<*>, vararg parameterTypes: Class<*>) {
-        val constructor = type.getConstructor(*parameterTypes)
-        assertTrue("$constructor is not public", Modifier.isPublic(constructor.modifiers))
-    }
 
     private fun assertNoUnimplementedAbstractMethods(type: Class<*>) {
         val unimplemented = abstractMethods(type).filter { findImplementation(type, it) == null }
