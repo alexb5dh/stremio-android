@@ -570,7 +570,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
 
             if (state.showAnalyticsDisclosure) {
                 androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { /* Block clicks outside */ },
+                    onDismissRequest = viewModel::dismissAnalyticsDisclosure,
                     title = {
                         Text(
                             text = "Privacy & Analytics Disclosure",
@@ -623,7 +623,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                             ThemedButton(
                                 text = "Disable",
                                 onClick = { viewModel.acknowledgeAnalyticsDisclosure(false) },
-                                containerColor = Color(0xFFD32F2F),
+                                containerColor = AccentPurple,
                                 modifier = Modifier.weight(1f)
                             )
                             ThemedButton(

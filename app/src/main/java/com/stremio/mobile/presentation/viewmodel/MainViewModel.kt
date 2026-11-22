@@ -757,6 +757,10 @@ class MainViewModel(
         showAnalyticsDisclosure.value = true
     }
 
+    fun dismissAnalyticsDisclosure() {
+        showAnalyticsDisclosure.value = false
+    }
+
     fun setMinSeedsThreshold(value: Int) {
         authRepository.setMinSeedsThreshold(value)
         minSeedsThreshold.value = value
