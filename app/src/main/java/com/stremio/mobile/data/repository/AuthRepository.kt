@@ -29,6 +29,9 @@ class AuthRepository(
 
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
+    // Not in "stremio_account", which logout clears.
+    private val serverPreferences = context.getSharedPreferences("streaming_server", Context.MODE_PRIVATE)
+
     fun getSelectedFont(): AppFont {
         val name = preferences.getString("selected_font", AppFont.PLUS_JAKARTA_SANS.name) ?: AppFont.PLUS_JAKARTA_SANS.name
         return runCatching { AppFont.valueOf(name) }.getOrDefault(AppFont.PLUS_JAKARTA_SANS)
@@ -86,6 +89,17 @@ class AuthRepository(
     fun setServerInForeground(enabled: Boolean) {
         preferences.edit().putBoolean("server_in_foreground", enabled).commit()
     }
+
+    fun getCustomStreamingServerUrl(): String? = serverPreferences.getString("custom_streaming_server_url", null)
+    fun isCustomStreamingServerEnabled(): Boolean = serverPreferences.getBoolean("custom_streaming_server_enabled", false)
+    fun setCustomStreamingServer(enabled: Boolean, url: String?) {
+        serverPreferences.edit()
+            .putBoolean("custom_streaming_server_enabled", enabled)
+            .putString("custom_streaming_server_url", url)
+            .commit()
+    }
+
+    fun getActiveCustomStreamingServerUrl(): String? = getCustomStreamingServerUrl()?.takeIf { isCustomStreamingServerEnabled() }
 
     fun isMobileDataWarning(): Boolean = preferences.getBoolean("mobile_data_warning", true)
     fun setMobileDataWarning(enabled: Boolean) {

@@ -13,24 +13,42 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.presentation.components.ThemedButton
 import com.stremio.mobile.presentation.components.ThemedCard
+import com.stremio.mobile.presentation.components.UrlInputRow
+import com.stremio.mobile.presentation.components.rememberLocalNetworkPermissionRequest
 import com.stremio.mobile.server.StreamingServerState
 import com.stremio.mobile.server.formatServerErrorMessage
+import com.stremio.mobile.server.hasLocalNetworkPermission
+import com.stremio.mobile.server.needsLocalNetworkPermission
+import com.stremio.mobile.server.parseStreamingServerUrl
 
 @Composable
 fun StreamingSettingsScreen(
     serverState: StreamingServerState,
+    customServerUrl: String,
+    isCustomServerEnabled: Boolean,
+    usesRemoteServer: Boolean,
+    onRetryServer: () -> Unit,
+    onSetCustomServer: (enabled: Boolean, url: String) -> Boolean,
     serverSettings: com.stremio.core.models.StreamingServer.Settings?,
     isSeedingEnabled: Boolean,
     minSeedsThreshold: Int,
@@ -107,10 +125,41 @@ fun StreamingSettingsScreen(
                         fontSize = 12.sp,
                     )
                 }
+
+                if (usesRemoteServer && serverState is StreamingServerState.Failed) {
+                    val context = LocalContext.current
+                    var hasPermission by remember { mutableStateOf(hasLocalNetworkPermission(context)) }
+                    // Both the system dialog and app settings resume the activity, so a grant is picked up here.
+                    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                        val granted = hasLocalNetworkPermission(context)
+                        if (granted && !hasPermission) onRetryServer()
+                        hasPermission = granted
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ThemedButton(text = "Retry", onClick = onRetryServer)
+                        if (!hasPermission) {
+                            val requestLocalNetwork = rememberLocalNetworkPermissionRequest(openSettingsIfBlocked = true)
+                            ThemedButton(text = "Allow Nearby Devices", onClick = { requestLocalNetwork {} })
+                        }
+                    }
+                }
             }
         }
 
-        if (serverSettings != null) {
+        CustomServerCard(
+            customServerUrl = customServerUrl,
+            isCustomServerEnabled = isCustomServerEnabled,
+            onSetCustomServer = onSetCustomServer,
+        )
+
+        if (usesRemoteServer) {
+            Text(
+                text = "Server options of a custom server are changed on that device, e.g. in Stremio on your PC.",
+                color = MutedText,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        } else if (serverSettings != null) {
             Text(
                 text = "SERVER OPTIONS",
                 color = MutedText,
@@ -235,4 +284,44 @@ fun StreamingSettingsScreen(
             description = "Automatically play the next best stream instead of asking"
         )
     }
+}
+
+@Composable
+private fun CustomServerCard(
+    customServerUrl: String,
+    isCustomServerEnabled: Boolean,
+    onSetCustomServer: (enabled: Boolean, url: String) -> Boolean,
+) {
+    var urlInput by rememberSaveable { mutableStateOf(customServerUrl) }
+    var urlError by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val requestLocalNetwork = rememberLocalNetworkPermissionRequest()
+
+    // Asked before saving, which may restart the app; a denial still saves.
+    fun save(newEnabled: Boolean, url: String) {
+        val commit = { urlError = !onSetCustomServer(newEnabled, url) }
+        val parsedUrl = parseStreamingServerUrl(url)
+        if (newEnabled && parsedUrl != null && needsLocalNetworkPermission(context, parsedUrl)) {
+            requestLocalNetwork { commit() }
+        } else {
+            commit()
+        }
+    }
+
+    SettingsToggleRow(
+        title = "Use Custom Server",
+        checked = isCustomServerEnabled,
+        // Turning off doesn't save edits in the field.
+        onCheckedChange = { checked -> save(checked, if (checked) urlInput else customServerUrl) },
+        description = "Stream through a server on another device, e.g. Stremio on your PC, instead of the built-in one. " +
+            "Switching servers restarts the app.",
+    )
+    UrlInputRow(
+        value = urlInput,
+        onValueChange = { urlInput = it; urlError = false },
+        placeholder = "http://192.168.1.10:11470",
+        buttonText = "Save",
+        onSubmit = { save(isCustomServerEnabled, urlInput) },
+        errorText = "Enter a valid http(s) URL, e.g. http://192.168.1.10:11470".takeIf { urlError },
+    )
 }

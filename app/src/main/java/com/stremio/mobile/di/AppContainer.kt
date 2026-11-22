@@ -1,12 +1,16 @@
 package com.stremio.mobile.di
 
 import android.content.Context
+import android.content.Intent
 import timber.log.Timber
 import com.stremio.mobile.core.StremioCore
 import com.stremio.mobile.player.PlaybackManager
+import com.stremio.mobile.server.ServerService
 import com.stremio.mobile.server.StubStreamingServerController
 import com.stremio.mobile.server.StreamingServerController
 import com.stremio.mobile.server.JniStreamingServerController
+import com.stremio.mobile.server.RemoteStreamingServerController
+import com.stremio.mobile.server.hasLocalNetworkPermission
 
 import com.stremio.mobile.data.repository.AddonRepository
 import com.stremio.mobile.data.repository.AuthRepository
@@ -34,11 +38,27 @@ class AppContainer(context: Context) {
     val updateRepository = UpdateRepository(context.applicationContext)
     val apkInstaller = ApkInstaller(context.applicationContext)
 
-    val serverController: StreamingServerController = try {
-        JniStreamingServerController(context, useForegroundService = { authRepository.isServerInForeground() })
-    } catch (e: UnsatisfiedLinkError) {
-        Timber.e(e, "Failed to load stream_server JNI, falling back to Stub")
-        StubStreamingServerController()
+    private val customServerUrl = authRepository.getActiveCustomStreamingServerUrl()
+
+    init {
+        core.remoteStreamingServerUrl = customServerUrl
+        if (customServerUrl != null) {
+            // Its sticky service may have outlived the previous process.
+            context.stopService(Intent(context, ServerService::class.java))
+        }
+    }
+
+    val serverController: StreamingServerController =
+        customServerUrl?.let { RemoteStreamingServerController(it, hasLocalNetworkPermission = { hasLocalNetworkPermission(context) }) }
+            ?: createLocalServerController(context)
+
+    private fun createLocalServerController(context: Context): StreamingServerController {
+        return try {
+            JniStreamingServerController(context, useForegroundService = { authRepository.isServerInForeground() })
+        } catch (e: UnsatisfiedLinkError) {
+            Timber.e(e, "Failed to load stream_server JNI, falling back to Stub")
+            StubStreamingServerController()
+        }
     }
 
 }

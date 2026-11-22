@@ -142,6 +142,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                     onInstallTraktAddon = viewModel::installTraktAddon,
                     onSetAutoStartOnBoot = viewModel::setAutoStartOnBoot,
                     onSetServerInForeground = viewModel::setServerInForeground,
+                    onSetCustomStreamingServer = viewModel::setCustomStreamingServer,
                     onSetMobileDataWarning = viewModel::setMobileDataWarning,
                     onSetKeepScreenOn = viewModel::setKeepScreenOn,
                     onSetSeedingEnabled = viewModel::setSeedingEnabled,
@@ -348,7 +349,9 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                 )
             }
 
-            if (state.server is StreamingServerState.Failed) {
+            // Not fatal for an offline remote server (PC asleep) or a build without the on-device one: settings show it,
+            // and a custom server can still be set there.
+            if (state.server is StreamingServerState.Failed && !state.usesRemoteStreamingServer && !viewModel.isOnDeviceServerMissing) {
                 val context = LocalContext.current
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = {
@@ -535,6 +538,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                     player = viewModel.getPlayer(),
                     activeUri = playbackState.activeUri,
                     title = playbackState.title ?: "Stream",
+                    streamingServerUrl = viewModel.streamingServerUrl,
                     onAttachView = viewModel::attachPlayerView,
                     onDetachView = viewModel::detachPlayerView,
                     onBack = viewModel::closePlayer,
@@ -670,6 +674,7 @@ private fun BoardScreen(
     onInstallTraktAddon: () -> Unit,
     onSetAutoStartOnBoot: (Boolean) -> Unit,
     onSetServerInForeground: (Boolean) -> Unit,
+    onSetCustomStreamingServer: (enabled: Boolean, url: String) -> Boolean,
     onSetMobileDataWarning: (Boolean) -> Unit,
     onSetKeepScreenOn: (Boolean) -> Unit,
     onSetSeedingEnabled: (Boolean) -> Unit,
@@ -1032,6 +1037,11 @@ private fun BoardScreen(
                             item {
                                 StreamingSettingsScreen(
                                     serverState = state.server,
+                                    customServerUrl = state.customStreamingServerUrl,
+                                    isCustomServerEnabled = state.isCustomStreamingServerEnabled,
+                                    usesRemoteServer = state.usesRemoteStreamingServer,
+                                    onRetryServer = onStartServer,
+                                    onSetCustomServer = onSetCustomStreamingServer,
                                     serverSettings = state.serverSettings,
                                     isSeedingEnabled = state.isSeedingEnabled,
                                     minSeedsThreshold = state.minSeedsThreshold,

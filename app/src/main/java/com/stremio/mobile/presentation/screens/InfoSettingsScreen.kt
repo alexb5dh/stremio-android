@@ -297,6 +297,7 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun ServerDetailRow(label: String, value: String) {
+    if (value.isEmpty()) return
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {

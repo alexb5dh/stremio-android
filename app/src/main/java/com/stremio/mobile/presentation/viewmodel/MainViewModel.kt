@@ -23,9 +23,12 @@ import com.stremio.mobile.player.PlayerTrackOption
 import com.stremio.mobile.core.theme.AppFont
 import timber.log.Timber
 import com.stremio.mobile.presentation.state.*
+import com.stremio.mobile.server.ServerService
 import com.stremio.mobile.server.StreamingServerController
 import com.stremio.mobile.server.StreamingServerState
+import com.stremio.mobile.server.StubStreamingServerController
 import com.stremio.mobile.server.formatServerErrorMessage
+import com.stremio.mobile.server.parseStreamingServerUrl
 import com.stremio.mobile.update.ApkInstaller
 import com.stremio.mobile.update.UpdateInfo
 import com.stremio.mobile.update.UpdateRepository
@@ -100,6 +103,8 @@ class MainViewModel(
     private val serverSettings = MutableStateFlow<com.stremio.core.models.StreamingServer.Settings?>(null)
     private val isAutoStartOnBoot = MutableStateFlow(authRepository.isAutoStartOnBoot())
     private val isServerInForeground = MutableStateFlow(authRepository.isServerInForeground())
+    private val customStreamingServerUrl = MutableStateFlow(authRepository.getCustomStreamingServerUrl().orEmpty())
+    private val isCustomStreamingServerEnabled = MutableStateFlow(authRepository.isCustomStreamingServerEnabled())
     private val isMobileDataWarning = MutableStateFlow(authRepository.isMobileDataWarning())
     private val isKeepScreenOn = MutableStateFlow(authRepository.isKeepScreenOn())
     private val isAnalyticsEnabled = MutableStateFlow(authRepository.isAnalyticsEnabled())
@@ -218,8 +223,12 @@ class MainViewModel(
             _updateState,
             isAutoUpdateEnabled,
             playerUiStyle,
+            customStreamingServerUrl,
+            isCustomStreamingServerEnabled,
         )
     ) { values ->
+        val loadedServerSettings = values[21] as com.stremio.core.models.StreamingServer.Settings?
+        val isRemoteServer = core.usesRemoteStreamingServer
         MainUiState(
             server = values[0] as StreamingServerState,
             selectedFont = values[45] as AppFont,
@@ -230,9 +239,12 @@ class MainViewModel(
             isAutoUpdateEnabled = values[50] as Boolean,
             serverPingStatus = values[1] as String,
             isPingLoading = values[2] as Boolean,
-            serverVersion = "0.1.8",
-            serverConfigPath = configPath,
-            serverCachePath = cachePath,
+            serverVersion = if (isRemoteServer) loadedServerSettings?.serverVersion.orEmpty() else "0.1.8",
+            serverConfigPath = if (isRemoteServer) "" else configPath,
+            serverCachePath = if (isRemoteServer) loadedServerSettings?.cacheRoot.orEmpty() else cachePath,
+            usesRemoteStreamingServer = isRemoteServer,
+            customStreamingServerUrl = values[52] as String,
+            isCustomStreamingServerEnabled = values[53] as Boolean,
             latestIntentUri = values[3] as String?,
             account = values[4] as AccountUiState,
             selectedSection = values[5] as MainSection,
@@ -251,7 +263,7 @@ class MainViewModel(
             libraryWithFilters = values[17] as com.stremio.core.models.LibraryWithFilters?,
             isDiscoverSeeAll = values[18] as Boolean,
             profileSettings = values[20] as com.stremio.core.types.profile.Profile.Settings?,
-            serverSettings = values[21] as com.stremio.core.models.StreamingServer.Settings?,
+            serverSettings = loadedServerSettings,
             isAutoStartOnBoot = values[22] as Boolean,
             isServerInForeground = values[23] as Boolean,
             isMobileDataWarning = values[24] as Boolean,
@@ -324,6 +336,7 @@ class MainViewModel(
         viewModelScope.launch {
             authRepository.getProfileSettingsFlow().collect { settings ->
                 profileSettings.value = settings
+                core.syncProfileStreamingServerUrl(settings)
             }
         }
         viewModelScope.launch {
@@ -436,7 +449,10 @@ class MainViewModel(
                     )
                     serverSettings.value = newSettings
                     isSeedingEnabled.value = settingsObj.optBoolean("seedingEnabled", true)
-                    core.updateStreamingServerSettings(newSettings)
+                    // Core would POST these back; leave a remote server's settings alone.
+                    if (!core.usesRemoteStreamingServer) {
+                        core.updateStreamingServerSettings(newSettings)
+                    }
                 }
             }
         }
@@ -588,15 +604,39 @@ class MainViewModel(
         if (current != enabled) {
             authRepository.setServerInForeground(enabled)
             isServerInForeground.value = enabled
-            
-            val packageManager = appContext.packageManager
-            val intent = packageManager.getLaunchIntentForPackage(appContext.packageName)
-            if (intent != null) {
-                val componentName = intent.component
-                val mainIntent = Intent.makeRestartActivityTask(componentName)
-                appContext.startActivity(mainIntent)
-                Runtime.getRuntime().exit(0)
-            }
+            restartApp()
+        }
+    }
+
+    val streamingServerUrl: String get() = core.streamingServerUrl
+
+    /** The build has no on-device server (e.g. debug builds without the stream_server library). */
+    val isOnDeviceServerMissing: Boolean get() = serverController is StubStreamingServerController
+
+    /** Restarts the app if the server in use changes. Returns false, saving nothing, if [urlInput] is invalid. */
+    fun setCustomStreamingServer(enabled: Boolean, urlInput: String): Boolean {
+        val url = if (urlInput.isBlank()) null else parseStreamingServerUrl(urlInput) ?: return false
+        if (enabled && url == null) return false
+
+        authRepository.setCustomStreamingServer(enabled, url)
+        customStreamingServerUrl.value = url.orEmpty()
+        isCustomStreamingServerEnabled.value = enabled
+        if (url.takeIf { enabled } != core.remoteStreamingServerUrl) {
+            // START_STICKY: it would come back with its notification in the new process.
+            appContext.stopService(Intent(appContext, ServerService::class.java))
+            restartApp()
+        }
+        return true
+    }
+
+    private fun restartApp() {
+        val packageManager = appContext.packageManager
+        val intent = packageManager.getLaunchIntentForPackage(appContext.packageName)
+        if (intent != null) {
+            val componentName = intent.component
+            val mainIntent = Intent.makeRestartActivityTask(componentName)
+            appContext.startActivity(mainIntent)
+            Runtime.getRuntime().exit(0)
         }
     }
 
@@ -1343,7 +1383,7 @@ class MainViewModel(
         streams.value = streams.value.copy(isResolving = true, error = null)
         playJob = viewModelScope.launch {
             val engine = PlayerEngine.fromProfileValue(profileSettings.value?.playerType)
-            if (streamRequiresLocalServer(option)) {
+            if (streamRequiresStreamingServer(option)) {
                 runCatching { startServerInternal() }
                     .onFailure { error ->
                         val errorMsg = "Streaming server failed to start: ${error.message ?: "Unknown error"}"
@@ -1382,7 +1422,7 @@ class MainViewModel(
                 properties = mapOf(
                     "stream_type" to option.addonTitle,
                     "player_engine" to engine.name,
-                    "is_resolving" to streamRequiresLocalServer(option)
+                    "is_resolving" to streamRequiresStreamingServer(option)
                 )
             )
             rememberLocalStreamSelection(option)
@@ -1401,12 +1441,12 @@ class MainViewModel(
         }
     }
 
-    private fun streamRequiresLocalServer(option: StreamOption): Boolean {
+    private fun streamRequiresStreamingServer(option: StreamOption): Boolean {
         if (option.core.stream.source is com.stremio.core.types.resource.Stream.Source.Tramvai) {
             return true
         }
         val directUrl = runCatching { core.directUrl(option.core.stream) }.getOrNull()
-        return directUrl?.startsWith(StremioCore.STREAMING_SERVER_BASE) == true
+        return directUrl?.startsWith("${core.streamingServerUrl}/") == true
     }
 
     private fun rememberLocalStreamSelection(option: StreamOption) {
@@ -1452,7 +1492,7 @@ class MainViewModel(
         noSeedsPollJob = viewModelScope.launch {
             while (true) {
                 playbackRepository.requestStreamStatistics(infoHash, fileIndex)
-                // Local JNI/HTTP roundtrip to the on-device streaming server; comfortably finishes well under this.
+                // Stats arrive asynchronously; a late reply is read on the next cycle.
                 delay(800)
                 val stats = playbackRepository.getStreamStatistics()
                 if (stats != null && stats.infoHash == infoHash) {
@@ -1683,6 +1723,7 @@ class MainViewModel(
         selectedSection.value = section
         isDiscoverSeeAll.value = false
         if (section == MainSection.Settings) {
+            if (core.usesRemoteStreamingServer) startServer()
             fetchStreamingServerSettingsDirectly()
         }
         if (section == MainSection.Library) {

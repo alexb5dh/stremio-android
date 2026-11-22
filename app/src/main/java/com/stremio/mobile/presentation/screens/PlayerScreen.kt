@@ -66,6 +66,7 @@ import coil3.compose.AsyncImage
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.stremio.mobile.core.findActivity
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.AccentGreen
 import com.stremio.mobile.core.theme.GlassSurface
@@ -97,6 +98,7 @@ fun PlayerScreen(
     player: com.stremio.mobile.player.Player?,
     activeUri: String?,
     title: String,
+    streamingServerUrl: String,
     onAttachView: (View) -> Unit,
     onDetachView: () -> Unit,
     onBack: () -> Unit,
@@ -497,7 +499,7 @@ fun PlayerScreen(
         }
         while (true) {
             val statsStr = withContext(Dispatchers.IO) {
-                fetchEngineStats(infoHash)
+                fetchEngineStats(streamingServerUrl, infoHash)
             }
             if (statsStr != null) {
                 torrentStats = try { JSONObject(statsStr) } catch (e: Exception) { null }
@@ -1639,9 +1641,9 @@ private fun formatSpeed(bytesPerSec: Double): String {
 }
 
 // Network fetch stats helper
-private fun fetchEngineStats(infoHash: String): String? {
+private fun fetchEngineStats(streamingServerUrl: String, infoHash: String): String? {
     return try {
-        val url = URL("http://127.0.0.1:11470/$infoHash/stats.json")
+        val url = URL("$streamingServerUrl/$infoHash/stats.json")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
         conn.connectTimeout = 1500
@@ -1654,15 +1656,6 @@ private fun fetchEngineStats(infoHash: String): String? {
     } catch (e: Exception) {
         null
     }
-}
-
-private fun Context.findActivity(): Activity? {
-    var context = this
-    while (context is android.content.ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    return null
 }
 
 @Composable

@@ -48,6 +48,10 @@ data class MainUiState(
     val isDiscoverSeeAll: Boolean = false,
     val profileSettings: com.stremio.core.types.profile.Profile.Settings? = null,
     val serverSettings: com.stremio.core.models.StreamingServer.Settings? = null,
+    /** Fixed until the app restarts. */
+    val usesRemoteStreamingServer: Boolean = false,
+    val customStreamingServerUrl: String = "",
+    val isCustomStreamingServerEnabled: Boolean = false,
     val isTraktAuthenticated: Boolean = false,
     val isAutoStartOnBoot: Boolean = false,
     val isServerInForeground: Boolean = true,
