@@ -22,7 +22,7 @@ class AuthRepository(
         private const val PREFERENCES_NAME = "stremio_account"
         private const val ANALYTICS_ENABLED_KEY = "analytics_enabled"
 
-        /** Readable before [StremioCore] exists, so telemetry can start first at app launch. */
+        /** Usable before [StremioCore] exists. */
         fun isAnalyticsEnabled(context: Context): Boolean =
             context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE).getBoolean(ANALYTICS_ENABLED_KEY, false)
     }

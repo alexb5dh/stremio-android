@@ -17,10 +17,7 @@ internal const val LOGGED_OUT_MARKER = ""
 
 internal data class IdentityChange(val reset: Boolean, val identify: String?)
 
-/**
- * Decides how to move PostHog from the last synced identity [identified] to [userId]: `null` when nothing changes.
- * [identified] is `null` when never synced (PostHog may hold an identity from an older app version), [LOGGED_OUT_MARKER] when logged out.
- */
+/** [identified] is `null` if never synced, [LOGGED_OUT_MARKER] if logged out. Returns `null` when nothing changes. */
 internal fun identityChange(identified: String?, userId: String?): IdentityChange? {
     if (identified == (userId ?: LOGGED_OUT_MARKER)) return null
     return IdentityChange(reset = identified != LOGGED_OUT_MARKER, identify = userId)
@@ -55,7 +52,6 @@ object Telemetry {
         }
     }
 
-    /** Hashed ID of the logged-in user, or `null` after logout. */
     fun setUser(id: String?) {
         userId = id
         if (isEnabled) syncUser()
@@ -66,55 +62,49 @@ object Telemetry {
         if (isEnabled) crashlytics.setCustomKey(key, value)
     }
 
-    // Crashlytics and Firebase Analytics start disabled via AndroidManifest meta-data. The runtime overrides below are persisted
-    // by each SDK and take precedence over the manifest flags on later launches.
     private fun applyEnabled(enabled: Boolean, atStartup: Boolean) {
         isEnabled = enabled
         setPostHogEnabled(enabled)
         setPerformanceEnabled(enabled, atStartup)
-        // The SDK can't be stopped once started, so turning telemetry off takes effect on the next launch.
+        // Can't be stopped; opt-out applies on next launch.
         if (enabled) FacebookLoginBridge.startSdk(appContext)
 
         crashlytics.setCrashlyticsCollectionEnabled(enabled)
-        // Drops reports finalized from earlier sessions.
         if (!enabled) crashlytics.deleteUnsentReports()
 
         FirebaseAnalytics.getInstance(appContext).setAnalyticsCollectionEnabled(enabled)
     }
 
-    // PostHog opt-out only blocks events, not its config/flags requests, so it is set up only while enabled.
-    // Until set up, all PostHog.* calls are no-ops.
+    // Set up only while enabled: its opt-out still lets config/flags requests through.
     private fun setPostHogEnabled(enabled: Boolean) {
         if (!isPostHogConfigured()) return
 
         if (enabled) {
             PostHogAndroid.setup(appContext, createPostHogConfig())
-            // Clears an opt-out persisted by older app versions, which setup prefers over the config.
+            // Clears an opt-out persisted by older app versions.
             PostHog.optIn()
         } else {
             PostHog.close()
-            // Events queued but not yet sent must not go out after a later opt-in.
             postHogQueueDir().deleteRecursively()
         }
     }
 
-    // Firebase Performance fetches Remote Config even with collection disabled, so it must not be constructed while off. It is
-    // constructed on the first activity resume via AppStateMonitor, so unregistering that at startup keeps it from starting.
+    // Fetches Remote Config even when disabled, so it must not be constructed while off; AppStateMonitor constructs it on first resume.
     private fun setPerformanceEnabled(enabled: Boolean, atStartup: Boolean) {
         when {
             isPerformanceStarted -> FirebasePerformance.getInstance().setPerformanceCollectionEnabled(enabled)
             enabled && atStartup -> {
-                // Overrides a persisted false from an earlier in-app opt-out.
+                // Overrides a persisted in-app opt-out.
                 FirebasePerformance.getInstance().setPerformanceCollectionEnabled(true)
                 isPerformanceStarted = true
             }
-            // Starting now would upload network metrics the SDK's instrumentation queued in memory while off; starts on next launch.
+            // Would upload metrics queued while off; starts on next launch.
             enabled -> Unit
             else -> AppStateMonitor.getInstance().unregisterActivityLifecycleCallbacks(appContext)
         }
     }
 
-    // PostHog ignores identify() while identified and no-ops while not set up, so the last identified ID is tracked here.
+    // PostHog ignores identify() while identified, so the last synced ID is tracked here.
     private fun syncUser() {
         val id = userId
         crashlytics.setUserId(id ?: "")
@@ -128,7 +118,7 @@ object Telemetry {
 
     private fun isPostHogConfigured() = BuildConfig.POSTHOG_API_KEY.isNotEmpty()
 
-    // PostHog's default location, set explicitly so the directory deleted on disable is the one configured here.
+    // PostHog's default, set explicitly to match the directory deleted on disable.
     private fun postHogQueueDir() = File(appContext.cacheDir, "posthog-disk-queue")
 
     private fun createPostHogConfig() = PostHogAndroidConfig(

@@ -26,15 +26,14 @@
         android:theme="@style/Theme.StremioMobile"
         android:usesCleartextTraffic="true">
 
-        <!-- Telemetry is opt-in: Firebase collection stays off until enabled at runtime (see Telemetry.kt) -->
+        <!-- Telemetry is opt-in, see Telemetry.kt -->
         <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="false" />
         <meta-data
             android:name="firebase_analytics_collection_enabled"
             android:value="false" />
-        <!-- Firebase Performance isn't started while off (see Telemetry.kt). This is the SDK default; set here so that after an
-             in-app opt-out its session-length check doesn't fetch Remote Config. -->
+        <!-- SDK default; set so Firebase Performance doesn't fetch Remote Config after an in-app opt-out -->
         <meta-data
             android:name="sessions_max_length_minutes"
             android:value="240" />
@@ -54,8 +53,7 @@
         <meta-data
             android:name="com.facebook.sdk.AdvertiserIDCollectionEnabled"
             android:value="false" />
-        <!-- The Facebook SDK starts only on opt-in or a Facebook login tap (see FacebookLoginBridge.kt); auto-init stays off so an
-             SDK init from elsewhere can't reach the network. -->
+        <!-- Facebook SDK starts only on opt-in or login tap, see FacebookLoginBridge.kt -->
         <meta-data
             android:name="com.facebook.sdk.AutoInitEnabled"
             android:value="false" />

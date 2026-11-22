@@ -156,7 +156,7 @@ private fun IntroScreen(
             }
         }
     }
-    // LoginManager needs a started SDK, which happens on telemetry opt-in or on the login tap below.
+    // LoginManager needs a started SDK.
     DisposableEffect(facebookCallback) {
         if (FacebookLoginBridge.isSdkStarted) {
             LoginManager.getInstance().registerCallback(FacebookLoginBridge.callbackManager, facebookCallback)
