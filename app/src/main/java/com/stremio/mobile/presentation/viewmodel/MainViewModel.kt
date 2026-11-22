@@ -619,11 +619,10 @@ class MainViewModel(
         val url = if (urlInput.isBlank()) null else parseStreamingServerUrl(urlInput) ?: return false
         if (enabled && url == null) return false
 
-        val activeBefore = authRepository.getActiveCustomStreamingServerUrl()
         authRepository.setCustomStreamingServer(enabled, url)
         customStreamingServerUrl.value = url.orEmpty()
         isCustomStreamingServerEnabled.value = enabled
-        if (authRepository.getActiveCustomStreamingServerUrl() != activeBefore) {
+        if (authRepository.getActiveCustomStreamingServerUrl() != core.remoteStreamingServerUrl) {
             // START_STICKY: it would come back with its notification in the new process.
             appContext.stopService(Intent(appContext, ServerService::class.java))
             restartApp()

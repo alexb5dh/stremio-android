@@ -93,7 +93,9 @@ fun InfoSettingsScreen(
                 if (serverConfigPath.isNotEmpty()) {
                     ServerDetailRow(label = "Database Config Path", value = serverConfigPath)
                 }
-                ServerDetailRow(label = "Server Cache Directory", value = serverCachePath)
+                if (serverCachePath.isNotEmpty()) {
+                    ServerDetailRow(label = "Server Cache Directory", value = serverCachePath)
+                }
             }
         }
 

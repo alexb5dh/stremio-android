@@ -41,8 +41,8 @@ class AppContainer(context: Context) {
     val customServerUrl = authRepository.getActiveCustomStreamingServerUrl()
 
     init {
+        core.remoteStreamingServerUrl = customServerUrl
         if (customServerUrl != null) {
-            core.useRemoteStreamingServer(customServerUrl)
             // Its sticky service may have outlived the previous process.
             context.stopService(Intent(context, ServerService::class.java))
         }

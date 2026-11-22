@@ -19,6 +19,12 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 
+/** Matches the whole [host] only ("pc" not in "pcm" or "pc.lan"); a sentence-ending "." still matches. */
+fun hostRedactionRegex(host: String): Regex {
+    val escaped = Regex.escape(host.removeSurrounding("[", "]"))
+    return Regex("""(?<![\w.-])$escaped(?![\w-]|\.\w)""", RegexOption.IGNORE_CASE)
+}
+
 class CrashlyticsTree : Timber.Tree() {
     private val emailRegex = Regex("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")
     private val passwordRegex = Regex("(?i)(password|token|apiKey|api_key|secret|auth|bearer|pass)\\s*[:=]\\s*[^&\\s]+")
@@ -29,9 +35,7 @@ class CrashlyticsTree : Timber.Tree() {
 
     /** Hides the remote streaming server's host in reports. */
     fun redactHost(host: String) {
-        val escaped = Regex.escape(host.removeSurrounding("[", "]"))
-        // Whole host only ("pc" not in "pcm" or "pc.lan"); a sentence-ending "." still matches.
-        hostRegex = Regex("""(?<![\w.-])$escaped(?![\w-]|\.\w)""", RegexOption.IGNORE_CASE)
+        hostRegex = hostRedactionRegex(host)
     }
 
     private fun sanitize(message: String): String {

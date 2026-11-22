@@ -73,17 +73,11 @@ class StremioCore(context: Context) {
     var initialized = false
         private set
 
-    /** No trailing slash. */
-    var streamingServerUrl: String = DEFAULT_STREAMING_SERVER_URL
-        private set
+    /** Set once at startup; null means the on-device server. No trailing slash. */
+    var remoteStreamingServerUrl: String? = null
 
-    var usesRemoteStreamingServer: Boolean = false
-        private set
-
-    fun useRemoteStreamingServer(baseUrl: String) {
-        streamingServerUrl = baseUrl
-        usesRemoteStreamingServer = true
-    }
+    val streamingServerUrl: String get() = remoteStreamingServerUrl ?: DEFAULT_STREAMING_SERVER_URL
+    val usesRemoteStreamingServer: Boolean get() = remoteStreamingServerUrl != null
 
     fun initialize() {
         if (initialized) return
