@@ -83,6 +83,8 @@ class ExoStreamPlayer(
                     .build()
             }
         }.setEnableDecoderFallback(true)
+            // Platform decoders and passthrough stay first; FFmpeg only takes formats none of them can play.
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         if (!hardwareDecoding) {
             renderersFactory.setMediaCodecSelector { mimeType, requiresSecure, requiresTunneling ->
