@@ -39,8 +39,14 @@ jobs:
           DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: bash .github/scripts/debug-keystore.sh install
 
+      - name: TEMP signing diagnostics
+        run: |
+          env | grep -i android | sort
+          ls -la ~/.android || true
+          ./gradlew :app:signingReport --no-configuration-cache | grep -A8 "Variant: debug" | head -20
+
       - name: Compile and assemble debug
-        run: ./gradlew :app:compileDebugKotlin :app:assembleDebug --warning-mode all
+        run: ./gradlew :app:compileDebugKotlin :app:assembleDebug --warning-mode all --info | grep -iE 'package(Debug|Arm|X86|Universal)|FROM-CACHE|signing|keystore' | head -60 || true
 
       - name: Verify debug APK outputs
         run: python .github/scripts/verify-apk-outputs.py app/build/outputs/apk/debug armeabi-v7a arm64-v8a x86 x86_64 universal

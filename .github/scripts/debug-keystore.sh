@@ -22,7 +22,7 @@ case "${1:-}" in
     apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)
     for apk in "$2"/*.apk; do
       certs=$("$apksigner" verify --print-certs "$apk")
-      actual=$(sed -n 's/^Signer.* certificate SHA-256 digest: //p' <<< "$certs" | sort -u)
+      actual=$(sed -n 's/^.*Signer.* certificate SHA-256 digest: //p' <<< "$certs" | sort -u)
       if [ "$actual" != "$expected" ]; then
         echo "$certs"
         echo "::error::$apk is signed with '$actual', expected the fixed debug key $expected."
