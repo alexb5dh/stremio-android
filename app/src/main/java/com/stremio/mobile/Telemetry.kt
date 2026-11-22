@@ -10,14 +10,28 @@ import com.posthog.android.PostHogAndroidConfig
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
+private const val LOGGED_OUT_MARKER = ""
+
+internal data class IdentityChange(val reset: Boolean, val identify: String?, val marker: String)
+
+/**
+ * Decides how to move PostHog from the last synced identity [identified] to [userId]: `null` when nothing changes.
+ * [identified] is `null` when never synced (PostHog may hold an identity from an older app version), [LOGGED_OUT_MARKER] when logged out.
+ */
+internal fun identityChange(identified: String?, userId: String?): IdentityChange? {
+    val target = userId ?: LOGGED_OUT_MARKER
+    if (identified == target) return null
+    return IdentityChange(reset = identified != LOGGED_OUT_MARKER, identify = userId, marker = target)
+}
+
 object Telemetry {
     private const val IDENTIFIED_USER_KEY = "posthog_identified_user"
-    private const val LOGGED_OUT_MARKER = ""
 
     private lateinit var appContext: Context
     private lateinit var preferences: SharedPreferences
     private var userId: String? = null
     private val customKeys = ConcurrentHashMap<String, String>()
+    private val crashlytics get() = FirebaseCrashlytics.getInstance()
 
     @Volatile
     var isEnabled: Boolean = false
@@ -26,16 +40,15 @@ object Telemetry {
     fun init(context: Context, enabled: Boolean) {
         appContext = context.applicationContext
         preferences = appContext.getSharedPreferences("telemetry", Context.MODE_PRIVATE)
-        // Default queue location of older app versions; nothing reads it since storagePrefix was changed.
-        File(appContext.cacheDir, "posthog-disk-queue").deleteRecursively()
         applyEnabled(enabled)
     }
 
     fun setEnabled(enabled: Boolean) {
+        if (enabled == isEnabled) return
         applyEnabled(enabled)
         if (enabled) {
             syncUser()
-            customKeys.forEach { (key, value) -> FirebaseCrashlytics.getInstance().setCustomKey(key, value) }
+            customKeys.forEach { (key, value) -> crashlytics.setCustomKey(key, value) }
         }
     }
 
@@ -47,7 +60,7 @@ object Telemetry {
 
     fun setCustomKey(key: String, value: String) {
         customKeys[key] = value
-        if (isEnabled) FirebaseCrashlytics.getInstance().setCustomKey(key, value)
+        if (isEnabled) crashlytics.setCustomKey(key, value)
     }
 
     // Firebase SDKs start disabled via AndroidManifest meta-data. The runtime overrides below are persisted by each SDK
@@ -56,7 +69,6 @@ object Telemetry {
         isEnabled = enabled
         setPostHogEnabled(enabled)
 
-        val crashlytics = FirebaseCrashlytics.getInstance()
         crashlytics.setCrashlyticsCollectionEnabled(enabled)
         // Drops reports finalized from earlier sessions.
         if (!enabled) crashlytics.deleteUnsentReports()
@@ -80,25 +92,22 @@ object Telemetry {
         }
     }
 
-    // PostHog ignores identify() for a different ID while already identified, and identify()/reset() are no-ops while it is
-    // not set up, so the last identified ID is tracked here and reconciled whenever telemetry is on.
-    // A missing marker means PostHog may still hold an identity from an older app version, so it is reset once.
+    // PostHog ignores identify() while identified and no-ops while not set up, so the last identified ID is tracked here.
     private fun syncUser() {
         val id = userId
-        FirebaseCrashlytics.getInstance().setUserId(id ?: "")
+        crashlytics.setUserId(id ?: "")
         if (!isPostHogConfigured()) return
 
-        val target = id ?: LOGGED_OUT_MARKER
-        val identified = preferences.getString(IDENTIFIED_USER_KEY, null)
-        if (identified == target) return
-        if (identified != LOGGED_OUT_MARKER) PostHog.reset()
-        if (id != null) PostHog.identify(id)
-        preferences.edit().putString(IDENTIFIED_USER_KEY, target).apply()
+        val change = identityChange(preferences.getString(IDENTIFIED_USER_KEY, null), id) ?: return
+        if (change.reset) PostHog.reset()
+        change.identify?.let { PostHog.identify(it) }
+        preferences.edit().putString(IDENTIFIED_USER_KEY, change.marker).apply()
     }
 
     private fun isPostHogConfigured() = BuildConfig.POSTHOG_API_KEY.isNotEmpty()
 
-    private fun postHogQueueDir() = File(appContext.noBackupFilesDir, "posthog-queue")
+    // PostHog's default location, set explicitly so the directory deleted on disable is the one configured here.
+    private fun postHogQueueDir() = File(appContext.cacheDir, "posthog-disk-queue")
 
     private fun createPostHogConfig() = PostHogAndroidConfig(
         apiKey = BuildConfig.POSTHOG_API_KEY,

@@ -2,6 +2,7 @@ package com.stremio.mobile
 
 import android.app.Application
 import android.content.Context
+import com.stremio.mobile.data.repository.AuthRepository
 import com.stremio.mobile.di.AppContainer
 import coil3.SingletonImageLoader
 import coil3.ImageLoader
@@ -58,13 +59,13 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         Timber.plant(Timber.DebugTree())
         Timber.plant(CrashlyticsTree())
+        Telemetry.init(this, AuthRepository.isAnalyticsEnabled(this))
         try {
             android.system.Os.setenv("TMPDIR", cacheDir.absolutePath, true)
         } catch (e: Exception) {
             Timber.e(e, "Failed to set TMPDIR environment variable")
         }
         container = AppContainer(this)
-        Telemetry.init(this, container.authRepository.isAnalyticsEnabled())
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
