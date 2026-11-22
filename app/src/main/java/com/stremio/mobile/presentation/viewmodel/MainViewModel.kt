@@ -1075,10 +1075,6 @@ class MainViewModel(
         streamsJob = launchStreamsMenuJob(item)
     }
 
-    /**
-     * Resumes the stream last watched for the item's [videoId] (null for movies), or opens the streams menu if the core has no
-     * exact match.
-     */
     private fun openLastWatchedContinueWatchingStream(item: CatalogItem, videoId: String?) {
         val isSeries = item.type == "series"
         streams.value = StreamsUiState(
@@ -1114,7 +1110,7 @@ class MainViewModel(
                         .let { details -> streamOptions(details).firstOrNull { it.lastUsed == LastUsedMatch.EXACT } }
                 }
             }.getOrNull()
-            // runCatching also catches the cancellation of this job: don't reopen this item's menu over the next one.
+            // runCatching swallows this job's cancellation.
             ensureActive()
 
             if (matchedOption != null) {
@@ -1126,7 +1122,7 @@ class MainViewModel(
         }
     }
 
-    /** Whether [details] are for [metaId] and, when set, [videoId], rather than a previously loaded item. */
+    /** Whether [details] are for this item (and video), not a previously loaded one. */
     private fun isSelected(details: com.stremio.core.models.MetaDetails, metaId: String, videoId: String?): Boolean {
         val selected = details.selected ?: return false
         return selected.metaPath.id == metaId && (videoId == null || selected.streamPath?.id == videoId)
@@ -1613,7 +1609,6 @@ class MainViewModel(
         }
     }
 
-    /** Fallback pick for the next episode when the core found no stream matching the last one played. */
     private fun sameAddonOrFirstStream(options: List<StreamOption>): StreamOption =
         lastPlayedOption?.let { last -> options.firstOrNull { it.addonTitle == last.addonTitle } } ?: options.first()
 

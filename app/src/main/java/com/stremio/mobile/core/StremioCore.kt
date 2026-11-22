@@ -447,14 +447,12 @@ class StremioCore(context: Context) {
         return tagLastUsed(streams, details.lastUsedStream) { pick -> lastUsedMatch(pick, playedStream(details)) }
     }
 
-    /** The stream history entry for the selected video. */
     private fun playedStream(details: MetaDetails): PlayedStream? {
         val selected = details.selected ?: return null
         val videoId = selected.streamPath?.id ?: return null
         return streamsHistory.playedStream(selected.metaPath.id, videoId)
     }
 
-    /** Whether a stream was played for [videoId] of [metaId], or for any of its videos when [videoId] is null. */
     fun hasStreamHistory(metaId: String, videoId: String?): Boolean = streamsHistory.contains(metaId, videoId)
 
     // endregion

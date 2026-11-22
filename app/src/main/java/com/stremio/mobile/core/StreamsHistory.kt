@@ -4,15 +4,12 @@ import com.stremio.core.Storage
 import org.json.JSONObject
 import timber.log.Timber
 
-/**
- * Reads which stream stremio-core last played for each video. The core keeps this history (its `StreamsBucket`) in [storage]
- * but doesn't expose it in any model.
- */
+/** The core's stream history (`StreamsBucket`), which it persists in [storage] but doesn't expose in any model. */
 class StreamsHistory(private val storage: Storage) {
     private var cachedRaw: String? = null
     private var cachedEntries: Map<String, Map<String, PlayedStream>> = emptyMap()
 
-    /** Whether a stream was played for [videoId] of [metaId], or for any of its videos when [videoId] is null. */
+    /** A null [videoId] matches any video of [metaId]. */
     fun contains(metaId: String, videoId: String?): Boolean {
         val videos = entries()[metaId] ?: return false
         return videoId == null || videoId in videos
@@ -34,10 +31,7 @@ class StreamsHistory(private val storage: Storage) {
         /** `STREAMS_STORAGE_KEY` in stremio-core. */
         const val STORAGE_KEY = "streams"
 
-        /**
-         * Parses the serialized `StreamsBucket` into entries per meta and video id:
-         * `{"uid": ..., "items": [[{"metaId", "videoId"}, {"stream": {...}, ...}], ...]}`. Malformed entries are skipped.
-         */
+        /** Parses `{"items": [[{"metaId", "videoId"}, {"stream": {...}}], ...]}`, skipping malformed entries. */
         fun parse(raw: String?): Map<String, Map<String, PlayedStream>> {
             if (raw.isNullOrBlank()) return emptyMap()
             val items = runCatching { JSONObject(raw).getJSONArray("items") }.getOrElse {

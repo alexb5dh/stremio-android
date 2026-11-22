@@ -24,7 +24,6 @@ class AuthRepository(
         removeLegacyStreamSelections()
     }
 
-    /** Drops the stream choices this app saved itself before switching to the core's stream history. */
     private fun removeLegacyStreamSelections() {
         val legacyKeys = preferences.all.keys.filter { it.startsWith("local_stream_selection:") }
         if (legacyKeys.isEmpty()) return

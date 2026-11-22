@@ -7,19 +7,14 @@ import com.stremio.core.types.resource.Stream
 import com.stremio.mobile.core.extensions.optNullableString
 import org.json.JSONObject
 
-/** Why the core picked a stream as the last used one (`MetaDetails.last_used_stream`). */
+/** Why the core picked `MetaDetails.last_used_stream`: played for this video, or matched by binge group. */
 enum class LastUsedMatch {
-    /** This stream was played for the selected video. */
     EXACT,
-
-    /** Not the stream played for the selected video: the core matched it by binge group, possibly from an earlier episode. */
     SAME_RELEASE,
 }
 
-/** The stream history entry for one video: the played stream's [streamSourceKey], null for source kinds without one. */
 data class PlayedStream(val sourceKey: String?)
 
-/** Tags the first of [streams] that is the core's last used [pick] with [match]. */
 fun tagLastUsed(streams: List<CoreStream>, pick: LoadableStream?, match: (Stream) -> LastUsedMatch): List<CoreStream> {
     if (pick == null) return streams
     val stream = (pick.content as? LoadableStream.Content.Ready)?.value?.stream ?: return streams
@@ -28,17 +23,11 @@ fun tagLastUsed(streams: List<CoreStream>, pick: LoadableStream?, match: (Stream
     return streams.toMutableList().also { it[index] = it[index].copy(lastUsed = match(stream)) }
 }
 
-/**
- * The core picks the played stream by source and falls back to one with the same binge group, so an existing history entry
- * alone doesn't make [pick] the played stream.
- */
+/** The core falls back to a stream with the same binge group, so a history entry alone doesn't mean [pick] was played. */
 fun lastUsedMatch(pick: Stream, played: PlayedStream?): LastUsedMatch =
     if (played != null && played.sourceKey == streamSourceKey(pick)) LastUsedMatch.EXACT else LastUsedMatch.SAME_RELEASE
 
-/**
- * Whether the core may still produce the last used stream: the addon that served it, or the meta item it needs, is loading.
- * No meta item at all means no addon serves it, so there will be no pick.
- */
+/** Whether the core may still pick the last used stream; without a meta item it never will. */
 fun isLastUsedStreamPending(details: MetaDetails): Boolean {
     val pick = details.lastUsedStream
     if (pick != null) return pick.content == null || pick.content is LoadableStream.Content.Loading
@@ -46,7 +35,7 @@ fun isLastUsedStreamPending(details: MetaDetails): Boolean {
     return metaItem.content == null || metaItem.content is LoadableMetaItem.Content.Loading
 }
 
-/** Identifies the source of a stream converted by the core's protobuf bridge; null for kinds that aren't compared. */
+/** Null for source kinds that aren't compared (archives, NZB). */
 fun streamSourceKey(stream: Stream): String? = when (val source = stream.source) {
     is Stream.Source.Url -> "url:${source.value.url}"
     is Stream.Source.YouTube -> "yt:${source.value.ytId}"
@@ -56,7 +45,6 @@ fun streamSourceKey(stream: Stream): String? = when (val source = stream.source)
     else -> null
 }
 
-/** [streamSourceKey] of a stream as the core serializes it (flattened `StreamSource` fields). */
 fun streamSourceKey(stream: JSONObject): String? = when {
     stream.has("url") -> "url:${stream.getString("url")}"
     stream.has("ytId") -> "yt:${stream.getString("ytId")}"
