@@ -1,6 +1,5 @@
 package com.stremio.mobile.presentation.components
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -22,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import com.stremio.mobile.core.findActivity
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.server.LOCAL_NETWORK_PERMISSION
@@ -94,6 +94,6 @@ private const val PREFERENCES = "permissions"
 private const val REQUESTED_KEY = "local_network_requested"
 
 private fun shouldShowRationale(context: Context): Boolean {
-    val activity = context as? Activity ?: return true
+    val activity = context.findActivity() ?: return true
     return ActivityCompat.shouldShowRequestPermissionRationale(activity, LOCAL_NETWORK_PERMISSION)
 }

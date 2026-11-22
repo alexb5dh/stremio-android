@@ -87,15 +87,9 @@ fun InfoSettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 ServerDetailRow(label = "Stremio Mobile Client", value = BuildConfig.VERSION_NAME)
-                if (serverVersion.isNotEmpty()) {
-                    ServerDetailRow(label = "Streaming Server Version", value = serverVersion)
-                }
-                if (serverConfigPath.isNotEmpty()) {
-                    ServerDetailRow(label = "Database Config Path", value = serverConfigPath)
-                }
-                if (serverCachePath.isNotEmpty()) {
-                    ServerDetailRow(label = "Server Cache Directory", value = serverCachePath)
-                }
+                ServerDetailRow(label = "Streaming Server Version", value = serverVersion)
+                ServerDetailRow(label = "Database Config Path", value = serverConfigPath)
+                ServerDetailRow(label = "Server Cache Directory", value = serverCachePath)
             }
         }
 
@@ -303,6 +297,7 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun ServerDetailRow(label: String, value: String) {
+    if (value.isEmpty()) return
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {

@@ -622,7 +622,7 @@ class MainViewModel(
         authRepository.setCustomStreamingServer(enabled, url)
         customStreamingServerUrl.value = url.orEmpty()
         isCustomStreamingServerEnabled.value = enabled
-        if (authRepository.getActiveCustomStreamingServerUrl() != core.remoteStreamingServerUrl) {
+        if (url.takeIf { enabled } != core.remoteStreamingServerUrl) {
             // START_STICKY: it would come back with its notification in the new process.
             appContext.stopService(Intent(appContext, ServerService::class.java))
             restartApp()
@@ -1497,7 +1497,7 @@ class MainViewModel(
         noSeedsPollJob = viewModelScope.launch {
             while (true) {
                 playbackRepository.requestStreamStatistics(infoHash, fileIndex)
-                // A slower remote reply is read on the next cycle.
+                // Stats arrive asynchronously; a late reply is read on the next cycle.
                 delay(800)
                 val stats = playbackRepository.getStreamStatistics()
                 if (stats != null && stats.infoHash == infoHash) {
@@ -1687,9 +1687,6 @@ class MainViewModel(
         viewModelScope.launch {
             isPingLoading.value = true
             serverPingStatus.value = "Checking..."
-            if (core.usesRemoteStreamingServer) {
-                serverController.start() // Re-probes an unreachable remote server, so this check doubles as a retry.
-            }
             val currentState = serverController.state.value
             if (currentState is StreamingServerState.Ready) {
                 val url = "${currentState.baseUrl}/heartbeat"
@@ -1731,6 +1728,7 @@ class MainViewModel(
         selectedSection.value = section
         isDiscoverSeeAll.value = false
         if (section == MainSection.Settings) {
+            if (core.usesRemoteStreamingServer) startServer()
             fetchStreamingServerSettingsDirectly()
         }
         if (section == MainSection.Library) {

@@ -2,7 +2,6 @@ package com.stremio.mobile.presentation.screens
 
 import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +50,7 @@ import com.facebook.FacebookCallback
 import com.facebook.FacebookException
 import com.facebook.login.LoginManager
 import com.facebook.login.LoginResult
+import com.stremio.mobile.core.findActivity
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.core.theme.StremioBackground
@@ -254,12 +254,6 @@ private fun IntroScreen(
             )
         }
     }
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }
 
 @Composable

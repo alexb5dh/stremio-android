@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import timber.log.Timber
 
 /** A streaming server on another device, e.g. Stremio on a PC. */
 class RemoteStreamingServerController(
@@ -32,13 +33,8 @@ class RemoteStreamingServerController(
             }
 
             val reachable = try {
-                var reachable = probe(baseUrl)
                 // Retry if it was up: the first request after idle may hit Wi-Fi power save.
-                if (!reachable && wasReady) {
-                    delay(RETRY_DELAY_MS)
-                    reachable = probe(baseUrl)
-                }
-                reachable
+                probe(baseUrl) || wasReady && run { delay(RETRY_DELAY_MS); probe(baseUrl) }
             } catch (e: CancellationException) {
                 mutableState.value = previousState
                 throw e
@@ -68,4 +64,6 @@ class RemoteStreamingServerController(
 
 /** 2xx only: any HTTP reply would also match e.g. a router page. */
 private suspend fun probeRemoteServer(baseUrl: String): Boolean =
-    isStreamingServerReachable(baseUrl, connectTimeoutMs = 1_500, readTimeoutMs = 3_000, acceptedCodes = 200..299)
+    isStreamingServerReachable(baseUrl, connectTimeoutMs = 1_500, readTimeoutMs = 3_000, acceptedCodes = 200..299) {
+        Timber.d("Remote streaming server probe failed: %s", it)
+    }

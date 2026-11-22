@@ -8,9 +8,11 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
-import timber.log.Timber
 
-/** Needed on Android 17+ to reach LAN addresses; not for loopback or VPN (Tailscale). */
+/**
+ * Needed on Android 17+ to reach the local network. Android's definition excludes VPN connections but lists 100.64.0.0/10,
+ * so Tailscale is assumed exempt (untested); its IPv6 part names no prefixes, so `fc`/`fd` below is an approximation.
+ */
 const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 
 fun hasLocalNetworkPermission(context: Context): Boolean =
@@ -48,6 +50,7 @@ suspend fun isStreamingServerReachable(
     connectTimeoutMs: Int,
     readTimeoutMs: Int = connectTimeoutMs,
     acceptedCodes: IntRange = 200..499,
+    onFailure: (Throwable) -> Unit = {},
 ): Boolean = withContext(Dispatchers.IO) {
     runCatching {
         val connection = URL("$baseUrl/settings").openConnection() as HttpURLConnection
@@ -60,7 +63,7 @@ suspend fun isStreamingServerReachable(
         } finally {
             connection.disconnect()
         }
-    }.onFailure { Timber.d("Streaming server probe failed: %s", it) }.getOrDefault(false)
+    }.onFailure(onFailure).getOrDefault(false)
 }
 
 private val leadingZeroOctet = Regex("""(^|\.)0\d""")

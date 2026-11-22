@@ -20,7 +20,7 @@ import com.posthog.android.PostHogAndroid
 import com.posthog.android.PostHogAndroidConfig
 
 /** Matches the whole [host] only ("pc" not in "pcm" or "pc.lan"); a sentence-ending "." still matches. */
-fun hostRedactionRegex(host: String): Regex {
+internal fun hostRedactionRegex(host: String): Regex {
     val escaped = Regex.escape(host.removeSurrounding("[", "]"))
     return Regex("""(?<![\w.-])$escaped(?![\w-]|\.\w)""", RegexOption.IGNORE_CASE)
 }
@@ -49,7 +49,7 @@ class CrashlyticsTree : Timber.Tree() {
 
     /** Re-wraps [t] when its message or a cause changed; the depth cap guards against cause cycles. */
     private fun sanitizeThrowable(t: Throwable, depth: Int = 0): Throwable {
-        val cause = t.cause?.takeIf { depth < 10 }?.let { sanitizeThrowable(it, depth + 1) }
+        val cause = if (depth < 10) t.cause?.let { sanitizeThrowable(it, depth + 1) } else t.cause
         val message = t.message?.let(::sanitize)
         if (message == t.message && cause === t.cause) return t
         return Throwable(message, cause).also { it.stackTrace = t.stackTrace }
@@ -83,7 +83,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
             Timber.e(e, "Failed to set TMPDIR environment variable")
         }
         container = AppContainer(this)
-        container.customServerUrl?.let { runCatching { java.net.URI(it).host }.getOrNull() }?.let(crashlyticsTree::redactHost)
+        container.core.remoteStreamingServerUrl?.let { runCatching { java.net.URI(it).host }.getOrNull() }?.let(crashlyticsTree::redactHost)
         val analyticsEnabled = container.authRepository.isAnalyticsEnabled()
         FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(analyticsEnabled)
 

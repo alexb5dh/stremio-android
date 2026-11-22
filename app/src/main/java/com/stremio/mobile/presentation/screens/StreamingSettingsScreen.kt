@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -25,6 +26,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
@@ -124,14 +127,19 @@ fun StreamingSettingsScreen(
                 }
 
                 if (usesRemoteServer && serverState is StreamingServerState.Failed) {
+                    val context = LocalContext.current
+                    var hasPermission by remember { mutableStateOf(hasLocalNetworkPermission(context)) }
+                    // Both the system dialog and app settings resume the activity, so a grant is picked up here.
+                    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                        val granted = hasLocalNetworkPermission(context)
+                        if (granted && !hasPermission) onRetryServer()
+                        hasPermission = granted
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ThemedButton(text = "Retry", onClick = onRetryServer)
-                        if (!hasLocalNetworkPermission(LocalContext.current)) {
+                        if (!hasPermission) {
                             val requestLocalNetwork = rememberLocalNetworkPermissionRequest(openSettingsIfBlocked = true)
-                            ThemedButton(
-                                text = "Allow Nearby Devices",
-                                onClick = { requestLocalNetwork { granted -> if (granted) onRetryServer() } },
-                            )
+                            ThemedButton(text = "Allow Nearby Devices", onClick = { requestLocalNetwork {} })
                         }
                     }
                 }

@@ -1040,7 +1040,7 @@ private fun BoardScreen(
                                     customServerUrl = state.customStreamingServerUrl,
                                     isCustomServerEnabled = state.isCustomStreamingServerEnabled,
                                     usesRemoteServer = state.usesRemoteStreamingServer,
-                                    onRetryServer = onCheckServer,
+                                    onRetryServer = onStartServer,
                                     onSetCustomServer = onSetCustomStreamingServer,
                                     serverSettings = state.serverSettings,
                                     isSeedingEnabled = state.isSeedingEnabled,

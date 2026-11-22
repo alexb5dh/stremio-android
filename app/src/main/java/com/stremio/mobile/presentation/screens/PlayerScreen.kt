@@ -66,6 +66,7 @@ import coil3.compose.AsyncImage
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.stremio.mobile.core.findActivity
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.AccentGreen
 import com.stremio.mobile.core.theme.GlassSurface
@@ -1655,15 +1656,6 @@ private fun fetchEngineStats(streamingServerUrl: String, infoHash: String): Stri
     } catch (e: Exception) {
         null
     }
-}
-
-private fun Context.findActivity(): Activity? {
-    var context = this
-    while (context is android.content.ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    return null
 }
 
 @Composable

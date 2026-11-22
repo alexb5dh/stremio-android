@@ -38,7 +38,7 @@ class AppContainer(context: Context) {
     val updateRepository = UpdateRepository(context.applicationContext)
     val apkInstaller = ApkInstaller(context.applicationContext)
 
-    val customServerUrl = authRepository.getActiveCustomStreamingServerUrl()
+    private val customServerUrl = authRepository.getActiveCustomStreamingServerUrl()
 
     init {
         core.remoteStreamingServerUrl = customServerUrl
