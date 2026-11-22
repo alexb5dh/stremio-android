@@ -30,10 +30,9 @@ class CrashlyticsTree : Timber.Tree() {
         return sanitized
     }
 
+    override fun isLoggable(tag: String?, priority: Int) = Telemetry.isEnabled && priority > android.util.Log.DEBUG
+
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-        if (!Telemetry.isEnabled || priority == android.util.Log.VERBOSE || priority == android.util.Log.DEBUG) {
-            return
-        }
         val crashlytics = FirebaseCrashlytics.getInstance()
         val sanitizedMessage = sanitize((tag?.let { "[$it] " } ?: "") + message)
         crashlytics.log(sanitizedMessage)
