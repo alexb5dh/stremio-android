@@ -1,5 +1,6 @@
 package com.stremio.mobile.server
 
+import com.stremio.mobile.core.extensions.use
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -14,11 +15,9 @@ suspend fun fetchActiveInfoHashes(baseUrl: String): Set<String>? = withContext(D
         connection.connectTimeout = 1_500
         connection.readTimeout = 3_000
         connection.setRequestProperty("Accept", "application/json")
-        try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) return@runCatching null
-            parseActiveInfoHashes(connection.inputStream.bufferedReader().use { it.readText() })
-        } finally {
-            connection.disconnect()
+        connection.use {
+            if (it.responseCode != HttpURLConnection.HTTP_OK) return@runCatching null
+            parseActiveInfoHashes(it.inputStream.bufferedReader().use { reader -> reader.readText() })
         }
     }.onFailure { Timber.d("Streaming server stats request failed: %s", it) }.getOrNull()
 }

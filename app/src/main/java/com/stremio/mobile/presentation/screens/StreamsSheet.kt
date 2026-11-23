@@ -509,7 +509,7 @@ private fun StreamRow(
                     itemVerticalAlignment = Alignment.CenterVertically
                 ) {
                     if (option.lastUsed != null) StreamFlag("Last used", background = AccentYellow, foreground = DarkForeground)
-                    if (playingNow) StreamFlag("Playing now", background = AccentGreen, foreground = Color.White)
+                    if (playingNow) StreamFlag("Playing now", background = AccentGreen, foreground = DarkForeground)
                     option.seeds?.let { s ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

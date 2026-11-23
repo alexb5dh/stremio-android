@@ -27,5 +27,5 @@ data class StreamsUiState(
     /** Series with no episode chosen yet show the episode picker; everything else shows streams. */
     val showingEpisodes: Boolean get() = isSeries && selectedVideoId == null
 
-    fun isPlayingNow(option: StreamOption): Boolean = option.infoHash?.let { it in playingInfoHashes } == true
+    fun isPlayingNow(option: StreamOption): Boolean = playingInfoHashes.isNotEmpty() && option.infoHash in playingInfoHashes
 }

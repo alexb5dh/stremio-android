@@ -44,22 +44,25 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -150,9 +153,20 @@ class MainViewModel(
     private val cachePath = File(this.appContext.cacheDir, "stream-server").absolutePath
 
     private val streams = MutableStateFlow(StreamsUiState())
-    private val playingInfoHashes = MutableStateFlow(emptySet<String>())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val playingInfoHashes: Flow<Set<String>> =
+        if (!core.usesRemoteStreamingServer) flowOf(emptySet())
+        else streams.map { it.isOpen && !it.showingEpisodes }.distinctUntilChanged().transformLatest { showingStreams ->
+            emit(emptySet())
+            while (showingStreams) {
+                // On failure the last result stays, so a dropped request doesn't reorder the list.
+                fetchActiveInfoHashes(core.streamingServerUrl)?.let { emit(it) }
+                delay(PLAYING_NOW_REFRESH_MS)
+            }
+        }
     val streamsState: StateFlow<StreamsUiState> = combine(streams, playingInfoHashes) { state, hashes -> state.copy(playingInfoHashes = hashes) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, StreamsUiState())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StreamsUiState())
 
     private val isRestoringSession = MutableStateFlow(
         run {
@@ -316,7 +330,6 @@ class MainViewModel(
         refreshLibrary()
         observeCoreAuth()
         observeStreamingServer()
-        observePlayingNow()
         restoreCoreSession()
         checkForUpdates(manual = true)
 
@@ -369,19 +382,6 @@ class MainViewModel(
                     authInFlight = false
                     val message = (inner.value.type as Event.Type.Error).value.error
                     account.value = account.value.copy(isLoading = false, error = message)
-                }
-            }
-        }
-    }
-
-    private fun observePlayingNow() {
-        if (!core.usesRemoteStreamingServer) return
-        viewModelScope.launch {
-            streams.map { it.isOpen && !it.showingEpisodes }.distinctUntilChanged().collectLatest { showingStreams ->
-                playingInfoHashes.value = emptySet()
-                while (showingStreams) {
-                    playingInfoHashes.value = fetchActiveInfoHashes(core.streamingServerUrl).orEmpty()
-                    delay(PLAYING_NOW_REFRESH_MS)
                 }
             }
         }
