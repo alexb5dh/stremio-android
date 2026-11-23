@@ -182,7 +182,7 @@ GitHub Actions workflows are included:
 - `android-pr-checks.yml` validates the Gradle wrapper, compiles debug Kotlin, and runs JVM unit tests for pull requests.
 - `android-nightly.yml` builds and uploads scheduled/manual debug APK artifacts for quick smoke testing.
 - `android-lint-diagnostics.yml` runs Android Lint manually and uploads reports without blocking the branch while the existing lint backlog is cleaned up.
-- `release-apk.yml` builds signed split APKs, generates SHA256 checksums, uploads mapping output, and publishes all assets to GitHub Releases.
+- `release-apk.yml` builds signed split APKs, generates SHA256 checksums, uploads mapping output, and publishes all assets to GitHub Releases on `vX.Y.Z` tag pushes; manual runs only upload the APKs as workflow artifacts.
 
 Required release secrets:
 

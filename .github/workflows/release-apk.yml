@@ -3,16 +3,12 @@ name: Release APK
 on:
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       version_name:
         description: Version name for a manual build
         required: false
-      publish:
-        description: Publish the APKs as a GitHub release (tag pushes always publish)
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -211,7 +207,6 @@ jobs:
             if [[ -z "${version_name}" ]]; then
               version_name="0.1.${GITHUB_RUN_NUMBER}"
             fi
-            release_tag="manual-${GITHUB_RUN_NUMBER}"
           fi
 
           echo "VERSION_NAME=${version_name}" >> "${GITHUB_ENV}"
@@ -289,7 +284,7 @@ jobs:
           if-no-files-found: error
 
       - name: Prepare release assets
-        if: github.ref_type == 'tag' || inputs.publish
+        if: github.event_name == 'push'
         shell: bash
         run: |
           rm -rf dist
@@ -306,7 +301,7 @@ jobs:
           fi
 
       - name: Verify release assets
-        if: github.ref_type == 'tag' || inputs.publish
+        if: github.event_name == 'push'
         shell: bash
         run: |
           test -f "dist/StremioMobile-v${VERSION_NAME}-armeabi-v7a-release.apk"
@@ -317,7 +312,7 @@ jobs:
           test -f "dist/StremioMobile-v${VERSION_NAME}-SHA256SUMS.txt"
 
       - name: Publish GitHub Release
-        if: github.ref_type == 'tag' || inputs.publish
+        if: github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
