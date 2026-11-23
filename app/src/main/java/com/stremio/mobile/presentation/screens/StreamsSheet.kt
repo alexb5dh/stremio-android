@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -497,9 +498,10 @@ private fun StreamRow(
             // Metadata Badges Row (Last used, Seeds, Size, Origin)
             if (option.lastUsed != null || option.seeds != null || option.size != null || option.origin != null) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically
                 ) {
                     if (option.lastUsed != null) StreamFlag("Last used")
                     option.seeds?.let { s ->
@@ -517,7 +519,8 @@ private fun StreamRow(
                                 text = s,
                                 color = Color(0xFF81C784),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
                             )
                         }
                     }
@@ -536,7 +539,8 @@ private fun StreamRow(
                                 text = sz,
                                 color = MutedText,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
                             )
                         }
                     }
