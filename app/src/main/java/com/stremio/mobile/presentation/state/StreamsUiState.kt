@@ -21,7 +21,11 @@ data class StreamsUiState(
     val releaseDateLabel: String? = null,
     val selectedProvider: String? = null,
     val sortCriterion: StreamSortCriterion = StreamSortCriterion.DEFAULT,
+    /** Torrents a custom streaming server has loaded, e.g. Stremio on a PC playing them. */
+    val playingInfoHashes: Set<String> = emptySet(),
 ) {
     /** Series with no episode chosen yet show the episode picker; everything else shows streams. */
     val showingEpisodes: Boolean get() = isSeries && selectedVideoId == null
+
+    fun isPlayingNow(option: StreamOption): Boolean = option.infoHash?.let { it in playingInfoHashes } == true
 }

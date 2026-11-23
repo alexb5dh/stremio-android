@@ -28,6 +28,7 @@ import com.stremio.mobile.server.ServerService
 import com.stremio.mobile.server.StreamingServerController
 import com.stremio.mobile.server.StreamingServerState
 import com.stremio.mobile.server.StubStreamingServerController
+import com.stremio.mobile.server.fetchActiveInfoHashes
 import com.stremio.mobile.server.formatServerErrorMessage
 import com.stremio.mobile.server.parseStreamingServerUrl
 import com.stremio.mobile.update.ApkInstaller
@@ -49,7 +50,9 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
@@ -61,6 +64,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
+
+private const val PLAYING_NOW_REFRESH_MS = 10_000L
 
 class MainViewModel(
     private val authRepository: AuthRepository,
@@ -145,7 +150,9 @@ class MainViewModel(
     private val cachePath = File(this.appContext.cacheDir, "stream-server").absolutePath
 
     private val streams = MutableStateFlow(StreamsUiState())
-    val streamsState: StateFlow<StreamsUiState> = streams
+    private val playingInfoHashes = MutableStateFlow(emptySet<String>())
+    val streamsState: StateFlow<StreamsUiState> = combine(streams, playingInfoHashes) { state, hashes -> state.copy(playingInfoHashes = hashes) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, StreamsUiState())
 
     private val isRestoringSession = MutableStateFlow(
         run {
@@ -309,6 +316,7 @@ class MainViewModel(
         refreshLibrary()
         observeCoreAuth()
         observeStreamingServer()
+        observePlayingNow()
         restoreCoreSession()
         checkForUpdates(manual = true)
 
@@ -361,6 +369,19 @@ class MainViewModel(
                     authInFlight = false
                     val message = (inner.value.type as Event.Type.Error).value.error
                     account.value = account.value.copy(isLoading = false, error = message)
+                }
+            }
+        }
+    }
+
+    private fun observePlayingNow() {
+        if (!core.usesRemoteStreamingServer) return
+        viewModelScope.launch {
+            streams.map { it.isOpen && !it.showingEpisodes }.distinctUntilChanged().collectLatest { showingStreams ->
+                playingInfoHashes.value = emptySet()
+                while (showingStreams) {
+                    playingInfoHashes.value = fetchActiveInfoHashes(core.streamingServerUrl).orEmpty()
+                    delay(PLAYING_NOW_REFRESH_MS)
                 }
             }
         }
