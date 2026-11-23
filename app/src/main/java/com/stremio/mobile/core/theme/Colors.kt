@@ -20,6 +20,10 @@ val GlassSurface = Color(0xB72A2935)
 /** Secondary accent used by the web client for primary "play" affordances. */
 val AccentGreen = Color(0xFF22B365)
 
+/** stremio-web's tertiary accent and dark foreground, used for stream flags such as "Last used". */
+val AccentYellow = Color(0xFFF6C700)
+val DarkForeground = Color(0xFF0C0B11)
+
 /** stremio-web's root background: a 41° dark navy-to-purple diagonal gradient. */
 val StremioBackgroundBrush = Brush.linearGradient(
     colors = listOf(Color(0xFF0C0B11), Color(0xFF1A173E)),

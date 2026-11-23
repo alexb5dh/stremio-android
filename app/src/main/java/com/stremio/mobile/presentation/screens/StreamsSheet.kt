@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,9 +45,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.stremio.mobile.core.theme.AccentPurple
+import com.stremio.mobile.core.theme.AccentYellow
+import com.stremio.mobile.core.theme.DarkForeground
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.core.theme.StremioBackgroundBrush
@@ -251,7 +255,7 @@ fun StreamsSheet(
                             .filter { state.selectedProvider == null || it.addonTitle == state.selectedProvider }
                             .let { filtered ->
                                 when (state.sortCriterion) {
-                                    StreamSortCriterion.DEFAULT -> filtered
+                                    StreamSortCriterion.DEFAULT -> filtered.sortedByDescending { it.lastUsed != null }
                                     StreamSortCriterion.SEEDS -> filtered.sortedByDescending { parseSeedCount(it.seeds) }
                                     StreamSortCriterion.SIZE -> filtered.sortedByDescending { parseSizeBytes(it.size) }
                                     StreamSortCriterion.QUALITY -> filtered.sortedByDescending { qualityScore(it.quality, preferredQuality) }
@@ -283,7 +287,17 @@ fun StreamsSheet(
                         }
                     }
 
+                    val streamsListState = rememberLazyListState()
+                    val pinnedKey = visibleStreams.firstOrNull()?.takeIf { it.lastUsed != null }?.key
+                    // A keyed list keeps the previous first row in view when a row moves above it, hiding the pinned one.
+                    LaunchedEffect(pinnedKey) {
+                        if (pinnedKey != null && streamsListState.firstVisibleItemIndex <= 1) {
+                            streamsListState.scrollToItem(0)
+                        }
+                    }
+
                     LazyColumn(
+                        state = streamsListState,
                         contentPadding = PaddingValues(bottom = 24.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
@@ -481,13 +495,15 @@ private fun StreamRow(
                 )
             }
             
-            // Metadata Badges Row (Seeds, Size, Origin)
-            if (option.seeds != null || option.size != null || option.origin != null) {
+            // Metadata Badges Row (Last used, Seeds, Size, Origin)
+            if (option.lastUsed != null || option.seeds != null || option.size != null || option.origin != null) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (option.lastUsed != null) StreamFlag("Last used")
                     option.seeds?.let { s ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -503,7 +519,8 @@ private fun StreamRow(
                                 text = s,
                                 color = Color(0xFF81C784),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
                             )
                         }
                     }
@@ -522,7 +539,8 @@ private fun StreamRow(
                                 text = sz,
                                 color = MutedText,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1
                             )
                         }
                     }
@@ -541,7 +559,9 @@ private fun StreamRow(
                                 text = o,
                                 color = MutedText,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -563,6 +583,28 @@ private fun StreamRow(
         }
     }
 }
+}
+
+@Composable
+private fun StreamFlag(text: String) {
+    // Matches `.flag` in stremio-web's Stream.less.
+    Box(
+        modifier = Modifier
+            .height(20.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(AccentYellow)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text.uppercase(),
+            color = DarkForeground,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.04.em,
+            maxLines = 1
+        )
+    }
 }
 
 @Composable

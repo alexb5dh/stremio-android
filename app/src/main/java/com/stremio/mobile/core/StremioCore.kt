@@ -47,6 +47,7 @@ data class CoreStream(
     val streamRequest: ResourceRequest,
     val metaRequest: ResourceRequest?,
     val addonTitle: String,
+    val lastUsed: LastUsedMatch? = null,
 )
 
 /** The user's global subtitle preferences, persisted on the core profile. */
@@ -64,6 +65,7 @@ data class SubtitlePrefs(
 class StremioCore(context: Context) {
     private val tag = "StremioCore"
     private val storage = AndroidStorage(context)
+    private val streamsHistory = StreamsHistory(storage)
 
     private val _events = MutableSharedFlow<RuntimeEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<RuntimeEvent> = _events.asSharedFlow()
@@ -424,10 +426,10 @@ class StremioCore(context: Context) {
         return if (content is LoadableMetaItem.Content.Ready) content.value.videos else emptyList()
     }
 
-    /** Flattens every addon's ready streams into [CoreStream]s, tagging each with its origin. */
+    /** Flattens every addon's ready streams into [CoreStream]s, tagging each with its origin and the core's last used one. */
     fun extractStreams(details: MetaDetails): List<CoreStream> {
         val metaRequest = details.metaItem?.request
-        return details.streams.flatMap { loadable: LoadableStreams ->
+        val streams = details.streams.flatMap { loadable: LoadableStreams ->
             val content = loadable.content
             if (content is LoadableStreams.Content.Ready) {
                 content.value.streams.map { stream ->
@@ -442,7 +444,16 @@ class StremioCore(context: Context) {
                 emptyList()
             }
         }
+        return tagLastUsed(streams, details.lastUsedStream) { pick -> lastUsedMatch(pick, playedStream(details)) }
     }
+
+    private fun playedStream(details: MetaDetails): PlayedStream? {
+        val selected = details.selected ?: return null
+        val videoId = selected.streamPath?.id ?: return null
+        return streamsHistory.playedStream(selected.metaPath.id, videoId)
+    }
+
+    fun hasStreamHistory(metaId: String, videoId: String?): Boolean = streamsHistory.contains(metaId, videoId)
 
     // endregion
 

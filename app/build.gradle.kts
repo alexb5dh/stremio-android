@@ -155,6 +155,7 @@ dependencies {
     implementation("com.google.firebase:firebase-perf")
     implementation("com.posthog:posthog-android:3.51.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
 data class StreamServerTarget(
     val taskSuffix: String,

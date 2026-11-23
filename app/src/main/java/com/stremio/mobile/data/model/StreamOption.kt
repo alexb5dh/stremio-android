@@ -1,6 +1,7 @@
 package com.stremio.mobile.data.model
 
 import com.stremio.mobile.core.CoreStream
+import com.stremio.mobile.core.LastUsedMatch
 
 data class StreamOption(
     val key: String,
@@ -13,4 +14,6 @@ data class StreamOption(
     val size: String? = null,
     val origin: String? = null,
     val cleanDescription: String? = null,
-)
+) {
+    val lastUsed: LastUsedMatch? get() = core.lastUsed
+}
