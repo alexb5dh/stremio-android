@@ -96,6 +96,8 @@ android {
         debug {
             // separate package, so debug and release builds install side by side
             applicationIdSuffix = ".debug"
+            // releases are a different package, so the in-app updater can't update debug builds
+            buildConfigField("String", "UPDATE_REPOSITORY", "\"\"")
             matchingFallbacks.add("release")
         }
         release {

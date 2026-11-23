@@ -205,9 +205,9 @@ keytool -genkeypair -keystore debug.p12 -storetype PKCS12 -storepass android -ke
 
 Locally, set the `DEBUG_KEYSTORE_FILE` Gradle property or environment variable to the keystore path to sign debug builds with the same key.
 
-Debug builds use the package `com.stremio.mobile.debug` and the name "Stremio Debug", so they install next to release builds. Its entry in `app/google-services.json` is a placeholder: a copy of the release entry with the debug package name, until a Firebase app is registered for that package.
+Debug builds use the package `com.stremio.mobile.debug` and the name "Stremio Debug", so they install next to release builds. Its entry in `app/google-services.json` is a placeholder: a copy of the release entry with the debug package name, until a Firebase app is registered for that package. Both apps run their streaming server on port 11470, so stop one app's server before testing the other's.
 
-The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it; builds with neither, such as local ones, report that update checks aren't configured.
+The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it. Debug builds, and builds with neither, such as local ones, report that update checks aren't configured.
 
 ## Native Libraries
 
@@ -241,7 +241,7 @@ The MPV rebuild script is intended for Linux/macOS environments. stream-server n
 - Gradle build cache and configuration cache are enabled.
 - ExoPlayer remains the default player backend.
 - MPV support is vendored source plus native outputs, not a Maven runtime dependency.
-- The app targets Android package `com.stremio.mobile`.
+- The app targets Android package `com.stremio.mobile` (`com.stremio.mobile.debug` for debug builds).
 - Supported native ABIs are currently `armeabi-v7a`, `arm64-v8a`, `x86`, and `x86_64`.
 - The project is optimized for phone UI. TV/D-pad behavior is not the primary target.
 
