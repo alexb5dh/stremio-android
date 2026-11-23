@@ -53,7 +53,6 @@ class UpdateRepository(private val context: Context) {
         }
 
         connection.use {
-            // The repository has no releases yet
             if (it.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
                 return@withContext UpdateState.UpToDate
             }
