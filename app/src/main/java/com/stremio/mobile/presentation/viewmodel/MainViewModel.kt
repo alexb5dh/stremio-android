@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stremio.core.runtime.RuntimeEvent
 import com.stremio.core.runtime.msg.Event
+import com.stremio.mobile.Telemetry
 import com.stremio.mobile.core.CoreStream
 import com.stremio.mobile.core.StremioCore
 import com.stremio.mobile.core.utils.parseStreamDescription
@@ -327,9 +328,7 @@ class MainViewModel(
                     refreshLibrary()
                     val email = accountState.email
                     if (!email.isNullOrBlank()) {
-                        val hashedEmail = sha256(email)
-                        com.posthog.PostHog.identify(hashedEmail)
-                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setUserId(hashedEmail)
+                        Telemetry.setUser(sha256(email))
                     }
                 }
             }
@@ -381,9 +380,9 @@ class MainViewModel(
                     event = "Streaming Server State Changed",
                     properties = mapOf("new_state" to stateName)
                 )
-                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setCustomKey("server_state", stateName)
+                Telemetry.setCustomKey("server_state", stateName)
                 if (state is StreamingServerState.Failed) {
-                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setCustomKey("server_error", formatServerErrorMessage(state.message))
+                    Telemetry.setCustomKey("server_error", formatServerErrorMessage(state.message))
                 }
 
                 if (state is StreamingServerState.Ready) {
@@ -663,15 +662,7 @@ class MainViewModel(
     fun setAnalyticsEnabled(enabled: Boolean) {
         authRepository.setAnalyticsEnabled(enabled)
         isAnalyticsEnabled.value = enabled
-        
-        if (enabled) {
-            com.posthog.PostHog.optIn()
-        } else {
-            com.posthog.PostHog.optOut()
-        }
-        
-        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
-            .setCrashlyticsCollectionEnabled(enabled)
+        Telemetry.setEnabled(enabled)
     }
 
     fun setAutoUpdateEnabled(enabled: Boolean) {
@@ -804,6 +795,10 @@ class MainViewModel(
 
     fun showAnalyticsDisclosure() {
         showAnalyticsDisclosure.value = true
+    }
+
+    fun dismissAnalyticsDisclosure() {
+        showAnalyticsDisclosure.value = false
     }
 
     fun setMinSeedsThreshold(value: Int) {
@@ -2041,8 +2036,7 @@ class MainViewModel(
         authRepository.clearSavedSession()
         account.value = AccountUiState()
         refreshLibrary()
-        com.posthog.PostHog.reset()
-        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().setUserId("")
+        Telemetry.setUser(null)
     }
 
     fun clearAccountError() {

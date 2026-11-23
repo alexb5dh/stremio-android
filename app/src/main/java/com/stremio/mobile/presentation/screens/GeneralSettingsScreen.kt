@@ -219,24 +219,24 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
                     )
                     
                     PrivacyBulletPoint(
-                        title = "1. Anonymous Analytics & Diagnostics",
-                        description = "We collect anonymous usage telemetry via PostHog and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance."
+                        title = "1. Analytics & Diagnostics",
+                        description = "If you opt in, we collect usage telemetry via PostHog and Firebase Analytics, performance metrics via Firebase Performance, and crash reports via Firebase Crashlytics to diagnose errors and optimize app performance. The Facebook SDK, used for Facebook login, contacts Facebook only when this is on or when you use Facebook login."
                     )
                     PrivacyBulletPoint(
-                        title = "2. Absolute PII Sanitization",
-                        description = "The client runs filters locally on your device to scrub any personally identifiable information (PII) like email addresses, passwords, or authentication tokens from logs and crash details before transmission."
+                        title = "2. PII Scrubbing in Logs",
+                        description = "The client runs filters locally on your device to scrub personally identifiable information (PII) like email addresses, passwords, or authentication tokens from log messages before transmission."
                     )
                     PrivacyBulletPoint(
-                        title = "3. Session Recording Masking",
-                        description = "For session replay diagnostics, all typed text input boxes and image files are completely masked and pixelated on-device, ensuring no personal data ever leaves the device."
+                        title = "3. No Session Recording",
+                        description = "Session replay is disabled; no screen recordings are captured."
                     )
                     PrivacyBulletPoint(
-                        title = "4. Opt-Out Controls",
-                        description = "You can disable analytics collection at any time in Settings -> Android Settings -> Share Diagnostics & Analytics."
+                        title = "4. Opt-In Controls",
+                        description = "Analytics collection is off until you enable it in Settings -> Android Settings -> Share Diagnostics & Analytics, and you can disable it again at any time. Firebase Performance starts and the Facebook SDK stops on the next app launch after you change the setting."
                     )
                     PrivacyBulletPoint(
                         title = "5. Upstream Stremio Telemetry",
-                        description = "IMPORTANT: The backend Stremio core, default add-ons, and stream providers run independently of this application and may collect separate telemetry according to Stremio's general privacy policy."
+                        description = "IMPORTANT: The built-in Stremio core sends Stremio's own usage events (e.g. playback and add-on installs) to the Stremio API when you sign in or out, regardless of this app's analytics setting. Default add-ons and stream providers run independently of this application and may collect separate telemetry according to their own privacy policies."
                     )
                 }
         },

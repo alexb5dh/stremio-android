@@ -574,7 +574,7 @@ fun StremioMobileApp(viewModel: MainViewModel) {
 
             if (state.showAnalyticsDisclosure) {
                 androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { /* Block clicks outside */ },
+                    onDismissRequest = viewModel::dismissAnalyticsDisclosure,
                     title = {
                         Text(
                             text = "Privacy & Analytics Disclosure",
@@ -592,19 +592,19 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Text(
-                                    text = "To help us improve stability and resolve errors, this open-source client collects anonymous crash reports (via Firebase Crashlytics) and usage metrics (via PostHog).",
+                                    text = "To help us improve stability and resolve errors, this open-source client can collect crash reports (via Firebase Crashlytics), usage metrics (via PostHog and Firebase Analytics) and performance metrics (via Firebase Performance). Nothing is collected unless you opt in. The Facebook SDK contacts Facebook only when this is on or when you use Facebook login.",
                                     color = Color.White,
                                     fontSize = 13.sp,
                                     lineHeight = 18.sp
                                 )
                                 Text(
-                                    text = "All personally identifiable info (PII) is automatically scrubbed locally on your device, and session recordings mask all text fields and image content.",
+                                    text = "Personally identifiable info (PII) such as emails and tokens is scrubbed from log messages locally on your device, and session recording is disabled.",
                                     color = MutedText,
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp
                                 )
                                 Text(
-                                    text = "Stremio separate analytics notice:\nNote that the official Stremio backend services, addons, or streaming server core run independently and may collect separate telemetry from this app.",
+                                    text = "Stremio separate analytics notice:\nThe built-in Stremio core sends Stremio's own usage events to the Stremio API when you sign in or out, regardless of this setting. Addons and stream providers run independently and may collect separate telemetry.",
                                     color = MutedText,
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp,
@@ -625,13 +625,13 @@ fun StremioMobileApp(viewModel: MainViewModel) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             ThemedButton(
-                                text = "Opt Out",
+                                text = "Disable",
                                 onClick = { viewModel.acknowledgeAnalyticsDisclosure(false) },
-                                containerColor = Color(0xFFD32F2F),
+                                containerColor = AccentPurple,
                                 modifier = Modifier.weight(1f)
                             )
                             ThemedButton(
-                                text = "Accept",
+                                text = "Enable",
                                 onClick = { viewModel.acknowledgeAnalyticsDisclosure(true) },
                                 containerColor = AccentPurple,
                                 modifier = Modifier.weight(1f)

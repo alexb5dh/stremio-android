@@ -58,7 +58,7 @@ data class MainUiState(
     val isMobileDataWarning: Boolean = true,
     val showMobileDataWarning: Boolean = false,
     val isKeepScreenOn: Boolean = true,
-    val isAnalyticsEnabled: Boolean = true,
+    val isAnalyticsEnabled: Boolean = false,
     val showAnalyticsDisclosure: Boolean = false,
     val isSeedingEnabled: Boolean = true,
     val isSearchOpen: Boolean = false,

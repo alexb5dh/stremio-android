@@ -18,7 +18,16 @@ class AuthRepository(
     private val core: StremioCore,
     private val context: Context
 ) {
-    private val preferences = context.getSharedPreferences("stremio_account", Context.MODE_PRIVATE)
+    companion object {
+        private const val PREFERENCES_NAME = "stremio_account"
+        private const val ANALYTICS_ENABLED_KEY = "analytics_enabled"
+
+        /** Usable before [StremioCore] exists. */
+        fun isAnalyticsEnabled(context: Context): Boolean =
+            context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE).getBoolean(ANALYTICS_ENABLED_KEY, false)
+    }
+
+    private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     // Not in "stremio_account", which logout clears.
     private val serverPreferences = context.getSharedPreferences("streaming_server", Context.MODE_PRIVATE)
@@ -102,9 +111,9 @@ class AuthRepository(
         preferences.edit().putBoolean("keep_screen_on", enabled).apply()
     }
 
-    fun isAnalyticsEnabled(): Boolean = preferences.getBoolean("analytics_enabled", true)
+    fun isAnalyticsEnabled(): Boolean = isAnalyticsEnabled(context)
     fun setAnalyticsEnabled(enabled: Boolean) {
-        preferences.edit().putBoolean("analytics_enabled", enabled).apply()
+        preferences.edit().putBoolean(ANALYTICS_ENABLED_KEY, enabled).apply()
     }
 
     fun isAnalyticsDisclosureAcknowledged(): Boolean = preferences.getBoolean("analytics_disclosure_acknowledged", false)

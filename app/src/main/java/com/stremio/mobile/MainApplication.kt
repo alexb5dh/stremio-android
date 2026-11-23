@@ -2,6 +2,7 @@ package com.stremio.mobile
 
 import android.app.Application
 import android.content.Context
+import com.stremio.mobile.data.repository.AuthRepository
 import com.stremio.mobile.di.AppContainer
 import coil3.SingletonImageLoader
 import coil3.ImageLoader
@@ -16,8 +17,6 @@ import okio.Path.Companion.toPath
 
 import timber.log.Timber
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import com.posthog.android.PostHogAndroid
-import com.posthog.android.PostHogAndroidConfig
 
 /** Matches the whole [host] only ("pc" not in "pcm" or "pc.lan"); a sentence-ending "." still matches. */
 internal fun hostRedactionRegex(host: String): Regex {
@@ -47,6 +46,8 @@ class CrashlyticsTree : Timber.Tree() {
         return sanitized
     }
 
+    override fun isLoggable(tag: String?, priority: Int) = Telemetry.isEnabled && priority > android.util.Log.DEBUG
+
     /** Re-wraps [t] when its message or a cause changed; the depth cap guards against cause cycles. */
     private fun sanitizeThrowable(t: Throwable, depth: Int = 0): Throwable {
         val cause = if (depth < 10) t.cause?.let { sanitizeThrowable(it, depth + 1) } else t.cause
@@ -56,9 +57,6 @@ class CrashlyticsTree : Timber.Tree() {
     }
 
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-        if (priority == android.util.Log.VERBOSE || priority == android.util.Log.DEBUG) {
-            return
-        }
         val crashlytics = FirebaseCrashlytics.getInstance()
         val sanitizedMessage = sanitize((tag?.let { "[$it] " } ?: "") + message)
         crashlytics.log(sanitizedMessage)
@@ -77,6 +75,7 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
         Timber.plant(Timber.DebugTree())
         val crashlyticsTree = CrashlyticsTree()
         Timber.plant(crashlyticsTree)
+        Telemetry.init(this, AuthRepository.isAnalyticsEnabled(this))
         try {
             android.system.Os.setenv("TMPDIR", cacheDir.absolutePath, true)
         } catch (e: Exception) {
@@ -84,24 +83,6 @@ class MainApplication : Application(), SingletonImageLoader.Factory {
         }
         container = AppContainer(this)
         container.core.remoteStreamingServerUrl?.let { runCatching { java.net.URI(it).host }.getOrNull() }?.let(crashlyticsTree::redactHost)
-        val analyticsEnabled = container.authRepository.isAnalyticsEnabled()
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(analyticsEnabled)
-
-        if (BuildConfig.POSTHOG_API_KEY.isNotEmpty()) {
-            val posthogConfig = PostHogAndroidConfig(
-                apiKey = BuildConfig.POSTHOG_API_KEY,
-                host = BuildConfig.POSTHOG_HOST
-            ).apply {
-                captureApplicationLifecycleEvents = true
-                captureScreenViews = true
-                sessionReplay = false
-                sessionReplayConfig.maskAllTextInputs = true
-                sessionReplayConfig.maskAllImages = true
-                optOut = !analyticsEnabled
-            }
-            PostHogAndroid.setup(this, posthogConfig)
-        }
-
     }
 
     override fun newImageLoader(context: Context): ImageLoader {
