@@ -41,7 +41,10 @@ sealed interface UpdateState {
 
 class UpdateRepository(private val context: Context) {
     suspend fun check(): UpdateState = withContext(Dispatchers.IO) {
-        val connection = (URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection).apply {
+        val repository = BuildConfig.UPDATE_REPOSITORY.takeIf { it.isNotBlank() }
+            ?: return@withContext UpdateState.Error("Update checks aren't configured for this build.")
+        val latestReleaseUrl = "https://api.github.com/repos/$repository/releases/latest"
+        val connection = (URL(latestReleaseUrl).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 10_000
@@ -50,6 +53,10 @@ class UpdateRepository(private val context: Context) {
         }
 
         connection.use {
+            // The repository has no releases yet
+            if (it.responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                return@withContext UpdateState.UpToDate
+            }
             if (it.responseCode !in 200..299) {
                 return@withContext UpdateState.Error("GitHub returned HTTP ${it.responseCode}.")
             }
@@ -227,7 +234,6 @@ class UpdateRepository(private val context: Context) {
     )
 
     companion object {
-        private const val LATEST_RELEASE_URL = "https://api.github.com/repos/perpetus/stremio-android/releases/latest"
         private val SEMVER_REGEX = Regex("""\d+\.\d+\.\d+""")
     }
 }
