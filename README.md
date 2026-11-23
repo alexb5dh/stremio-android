@@ -205,7 +205,7 @@ keytool -genkeypair -keystore debug.p12 -storetype PKCS12 -storepass android -ke
 
 Locally, set the `DEBUG_KEYSTORE_FILE` Gradle property or environment variable to the keystore path to sign debug builds with the same key.
 
-Debug builds use the package `com.stremio.mobile.debug` and the name "Stremio Debug", so they install next to release builds. `app/src/debug/google-services.json` is a placeholder: a copy of the release Firebase config with the debug package name, until a Firebase app is registered for that package.
+Debug builds use the package `com.stremio.mobile.debug` and the name "Stremio Debug", so they install next to release builds. Its entry in `app/google-services.json` is a placeholder: a copy of the release entry with the debug package name, until a Firebase app is registered for that package.
 
 The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it; builds with neither, such as local ones, report that update checks aren't configured.
 
