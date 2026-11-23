@@ -8,7 +8,7 @@ import timber.log.Timber
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Info hashes of the torrents the server has loaded (the only signal it gives): playing now, or until about 2 minutes after the last stream stops. */
+/** Info hashes of the torrents the server has loaded, the only signal it gives: playing now, or up to ~2 minutes after the last stream. */
 suspend fun fetchActiveInfoHashes(baseUrl: String): Set<String>? = withContext(Dispatchers.IO) {
     runCatching {
         val connection = URL("$baseUrl/stats.json").openConnection() as HttpURLConnection
