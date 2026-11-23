@@ -41,10 +41,9 @@ sealed interface UpdateState {
 
 class UpdateRepository(private val context: Context) {
     suspend fun check(): UpdateState = withContext(Dispatchers.IO) {
-        val repository = BuildConfig.UPDATE_REPOSITORY.takeIf { it.isNotBlank() }
-            ?: return@withContext UpdateState.Error("Update checks aren't configured for this build.")
-        val latestReleaseUrl = "https://api.github.com/repos/$repository/releases/latest"
-        val connection = (URL(latestReleaseUrl).openConnection() as HttpURLConnection).apply {
+        val githubRepository = BuildConfig.UPDATE_REPOSITORY
+            .ifEmpty { return@withContext UpdateState.Error("Update checks aren't configured for this build.") }
+        val connection = (URL("https://api.github.com/repos/$githubRepository/releases/latest").openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 10_000
