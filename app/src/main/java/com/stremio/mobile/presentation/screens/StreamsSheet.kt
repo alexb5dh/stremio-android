@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Storage
@@ -45,10 +44,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.stremio.mobile.core.LastUsedMatch
 import com.stremio.mobile.core.theme.AccentPurple
+import com.stremio.mobile.core.theme.AccentYellow
+import com.stremio.mobile.core.theme.DarkForeground
 import com.stremio.mobile.core.theme.GlassSurface
 import com.stremio.mobile.core.theme.MutedText
 import com.stremio.mobile.core.theme.StremioBackgroundBrush
@@ -500,7 +501,7 @@ private fun StreamRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    option.lastUsed?.let { LastUsedBadge(it) }
+                    if (option.lastUsed != null) StreamFlag("Last used")
                     option.seeds?.let { s ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -581,29 +582,22 @@ private fun StreamRow(
 }
 
 @Composable
-private fun LastUsedBadge(match: LastUsedMatch) {
-    Row(
+private fun StreamFlag(text: String) {
+    // Matches `.flag` in stremio-web's Stream.less.
+    Box(
         modifier = Modifier
+            .height(20.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(AccentPurple)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+            .background(AccentYellow)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Outlined.History,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(12.dp)
-        )
         Text(
-            text = when (match) {
-                LastUsedMatch.EXACT -> "Last watched"
-                LastUsedMatch.SAME_RELEASE -> "Same release"
-            },
-            color = Color.White,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
+            text = text.uppercase(),
+            color = DarkForeground,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.04.em,
             maxLines = 1
         )
     }
