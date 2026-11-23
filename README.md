@@ -197,6 +197,14 @@ To create the base64 keystore secret from PowerShell:
 [Convert]::ToBase64String([IO.File]::ReadAllBytes($env:ANDROID_KEYSTORE_FILE))
 ```
 
+Optional debug signing secret: `DEBUG_KEYSTORE_BASE64`, a base64 debug keystore that `android-ci.yml` and `android-nightly.yml` sign debug APKs with, so newer CI builds install over older ones. Without it, every run signs with a new random key. It must use the default debug credentials:
+
+```powershell
+keytool -genkeypair -keystore debug.p12 -storetype PKCS12 -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10950 -dname "CN=Android Debug,O=Android,C=US"
+```
+
+Locally, set the `DEBUG_KEYSTORE_FILE` Gradle property or environment variable to the keystore path to sign debug builds with the same key.
+
 The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it; builds with neither, such as local ones, report that update checks aren't configured.
 
 ## Native Libraries

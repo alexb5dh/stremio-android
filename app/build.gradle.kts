@@ -38,6 +38,8 @@ val posthogApiKey = (localProperties.getProperty("posthog.apiKey") ?: System.get
 val posthogHost = (localProperties.getProperty("posthog.host") ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com").trim()
 // owner/repo whose GitHub releases the in-app updater checks; GitHub Actions sets GITHUB_REPOSITORY
 val updateRepository = stringPropertyOrEnv("UPDATE_REPOSITORY") ?: stringPropertyOrEnv("GITHUB_REPOSITORY").orEmpty()
+// fixed debug key (default debug credentials), so newer debug builds install over older ones; CI sets it from a secret
+val debugKeystoreFile = stringPropertyOrEnv("DEBUG_KEYSTORE_FILE")
 
 android {
     namespace = "com.stremio.mobile"
@@ -75,6 +77,11 @@ android {
     }
 
     signingConfigs {
+        if (debugKeystoreFile != null) {
+            getByName("debug") {
+                storeFile = file(debugKeystoreFile)
+            }
+        }
         if (!hasPartialReleaseSigning && releaseSigningValues.all { it != null }) {
             create("release") {
                 storeFile = file(releaseSigningValues[0]!!)
@@ -88,9 +95,6 @@ android {
     buildTypes {
         debug {
             matchingFallbacks.add("release")
-            signingConfigs.findByName("release")?.let {
-                signingConfig = it
-            }
         }
         release {
             isMinifyEnabled = true
