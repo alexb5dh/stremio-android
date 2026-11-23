@@ -154,14 +154,18 @@ class MainViewModel(
 
     private val streams = MutableStateFlow(StreamsUiState())
 
+    // Survives the polling restarting when the app returns from the background, so the flags don't blink.
+    private var lastPlayingInfoHashes = emptySet<String>()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private val playingInfoHashes: Flow<Set<String>> =
         if (!core.usesRemoteStreamingServer) flowOf(emptySet())
         else streams.map { it.isOpen && !it.showingEpisodes }.distinctUntilChanged().transformLatest { showingStreams ->
-            emit(emptySet())
+            if (!showingStreams) lastPlayingInfoHashes = emptySet()
+            emit(lastPlayingInfoHashes)
             while (showingStreams) {
                 // On failure the last result stays, so a dropped request doesn't reorder the list.
-                fetchActiveInfoHashes(core.streamingServerUrl)?.let { emit(it) }
+                fetchActiveInfoHashes(core.streamingServerUrl)?.let { lastPlayingInfoHashes = it; emit(it) }
                 delay(PLAYING_NOW_REFRESH_MS)
             }
         }

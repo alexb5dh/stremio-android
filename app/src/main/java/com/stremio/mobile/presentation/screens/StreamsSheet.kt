@@ -251,7 +251,9 @@ fun StreamsSheet(
                     }
                 } else {
                     val providers = remember(state.streams) { state.streams.map { it.addonTitle }.distinct() }
-                    val visibleStreams = remember(state.streams, state.selectedProvider, state.sortCriterion, preferredQuality, state.playingInfoHashes) {
+                    val visibleStreams = remember(
+                        state.streams, state.selectedProvider, state.sortCriterion, preferredQuality, state.playingInfoHashes
+                    ) {
                         state.streams
                             .filter { state.selectedProvider == null || it.addonTitle == state.selectedProvider }
                             .let { filtered ->
@@ -291,10 +293,11 @@ fun StreamsSheet(
                     }
 
                     val streamsListState = rememberLazyListState()
-                    val pinnedKey = visibleStreams.firstOrNull()?.takeIf { it.lastUsed != null || state.isPlayingNow(it) }?.key
-                    // A keyed list keeps the previous first row in view when a row moves above it, hiding the pinned one.
+                    val pinnedRows = visibleStreams.takeWhile { it.lastUsed != null || state.isPlayingNow(it) }
+                    val pinnedKey = pinnedRows.firstOrNull()?.key
+                    // A keyed list keeps the previous first row in view when rows move above it, hiding the pinned ones.
                     LaunchedEffect(pinnedKey) {
-                        if (pinnedKey != null && streamsListState.firstVisibleItemIndex <= 1) {
+                        if (pinnedKey != null && streamsListState.firstVisibleItemIndex <= pinnedRows.size) {
                             streamsListState.scrollToItem(0)
                         }
                     }
