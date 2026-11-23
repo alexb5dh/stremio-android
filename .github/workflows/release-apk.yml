@@ -3,7 +3,7 @@ name: Release APK
 on:
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       version_name:
@@ -284,7 +284,7 @@ jobs:
           if-no-files-found: error
 
       - name: Prepare release assets
-        if: github.ref_type == 'tag'
+        if: github.event_name == 'push'
         shell: bash
         run: |
           rm -rf dist
@@ -301,7 +301,7 @@ jobs:
           fi
 
       - name: Verify release assets
-        if: github.ref_type == 'tag'
+        if: github.event_name == 'push'
         shell: bash
         run: |
           test -f "dist/StremioMobile-v${VERSION_NAME}-armeabi-v7a-release.apk"
@@ -312,7 +312,7 @@ jobs:
           test -f "dist/StremioMobile-v${VERSION_NAME}-SHA256SUMS.txt"
 
       - name: Publish GitHub Release
-        if: github.ref_type == 'tag'
+        if: github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
