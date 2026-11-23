@@ -94,6 +94,8 @@ android {
 
     buildTypes {
         debug {
+            // separate package, so debug and release builds install side by side
+            applicationIdSuffix = ".debug"
             matchingFallbacks.add("release")
         }
         release {
