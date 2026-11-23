@@ -8,8 +8,10 @@ import com.stremio.core.models.common.Loading
 import com.stremio.core.types.addon.ResourcePath
 import com.stremio.core.types.addon.ResourceRequest
 import com.stremio.core.types.resource.Stream
-import com.stremio.core.types.resource.StreamBehaviorHints
-import com.stremio.core.types.resource.StreamDeepLinks
+import com.stremio.mobile.core.StreamFixtures.request
+import com.stremio.mobile.core.StreamFixtures.stream
+import com.stremio.mobile.core.StreamFixtures.torrent
+import com.stremio.mobile.core.StreamFixtures.url
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -20,19 +22,6 @@ import org.junit.Test
 class LastUsedStreamsTest {
     private val addonA = request("https://a.example/manifest.json")
     private val addonB = request("https://b.example/manifest.json")
-
-    private fun request(base: String) = ResourceRequest(base = base, path = ResourcePath(resource = "stream", type = "movie", id = "tt1"))
-
-    private fun stream(source: Stream.Source<*>?, name: String = "1080p") = Stream(
-        source = source,
-        name = name,
-        behaviorHints = StreamBehaviorHints(notWebReady = false),
-        deepLinks = StreamDeepLinks(player = "", externalPlayer = StreamDeepLinks.ExternalPlayerLink()),
-    )
-
-    private fun url(url: String) = stream(Stream.Source.Url(Stream.Url(url = url)))
-
-    private fun torrent(infoHash: String, fileIdx: Int?) = stream(Stream.Source.Tramvai(Stream.Tramvai(infoHash = infoHash, fileIdx = fileIdx)))
 
     private fun core(stream: Stream, request: ResourceRequest = addonA) = CoreStream(stream, request, metaRequest = null, addonTitle = "Addon")
 

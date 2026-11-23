@@ -1,5 +1,6 @@
 package com.stremio.mobile.data.model
 
+import com.stremio.core.types.resource.Stream
 import com.stremio.mobile.core.CoreStream
 import com.stremio.mobile.core.LastUsedMatch
 
@@ -16,4 +17,5 @@ data class StreamOption(
     val cleanDescription: String? = null,
 ) {
     val lastUsed: LastUsedMatch? get() = core.lastUsed
+    val infoHash: String? get() = (core.stream.source as? Stream.Source.Tramvai)?.value?.infoHash?.lowercase()
 }

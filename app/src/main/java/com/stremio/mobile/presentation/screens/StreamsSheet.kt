@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.stremio.mobile.core.theme.AccentGreen
 import com.stremio.mobile.core.theme.AccentPurple
 import com.stremio.mobile.core.theme.AccentYellow
 import com.stremio.mobile.core.theme.DarkForeground
@@ -250,12 +251,16 @@ fun StreamsSheet(
                     }
                 } else {
                     val providers = remember(state.streams) { state.streams.map { it.addonTitle }.distinct() }
-                    val visibleStreams = remember(state.streams, state.selectedProvider, state.sortCriterion, preferredQuality) {
+                    val visibleStreams = remember(
+                        state.streams, state.selectedProvider, state.sortCriterion, preferredQuality, state.playingInfoHashes
+                    ) {
                         state.streams
                             .filter { state.selectedProvider == null || it.addonTitle == state.selectedProvider }
                             .let { filtered ->
                                 when (state.sortCriterion) {
-                                    StreamSortCriterion.DEFAULT -> filtered.sortedByDescending { it.lastUsed != null }
+                                    StreamSortCriterion.DEFAULT -> filtered.sortedWith(
+                                        compareByDescending<StreamOption> { it.lastUsed != null }.thenByDescending { state.isPlayingNow(it) }
+                                    )
                                     StreamSortCriterion.SEEDS -> filtered.sortedByDescending { parseSeedCount(it.seeds) }
                                     StreamSortCriterion.SIZE -> filtered.sortedByDescending { parseSizeBytes(it.size) }
                                     StreamSortCriterion.QUALITY -> filtered.sortedByDescending { qualityScore(it.quality, preferredQuality) }
@@ -288,10 +293,11 @@ fun StreamsSheet(
                     }
 
                     val streamsListState = rememberLazyListState()
-                    val pinnedKey = visibleStreams.firstOrNull()?.takeIf { it.lastUsed != null }?.key
-                    // A keyed list keeps the previous first row in view when a row moves above it, hiding the pinned one.
+                    val pinnedRows = visibleStreams.takeWhile { it.lastUsed != null || state.isPlayingNow(it) }
+                    val pinnedKey = pinnedRows.firstOrNull()?.key
+                    // A keyed list keeps the previous first row in view when rows move above it, hiding the pinned ones.
                     LaunchedEffect(pinnedKey) {
-                        if (pinnedKey != null && streamsListState.firstVisibleItemIndex <= 1) {
+                        if (pinnedKey != null && streamsListState.firstVisibleItemIndex <= pinnedRows.size) {
                             streamsListState.scrollToItem(0)
                         }
                     }
@@ -307,6 +313,7 @@ fun StreamsSheet(
                         items(visibleStreams, key = { it.key }) { option ->
                             StreamRow(
                                 option = option,
+                                playingNow = state.isPlayingNow(option),
                                 enabled = !state.isResolving,
                                 onSelect = { onSelect(option) }
                             )
@@ -413,6 +420,7 @@ private fun EpisodeRow(
 @Composable
 private fun StreamRow(
     option: StreamOption,
+    playingNow: Boolean,
     enabled: Boolean,
     onSelect: () -> Unit,
 ) {
@@ -495,15 +503,16 @@ private fun StreamRow(
                 )
             }
             
-            // Metadata Badges Row (Last used, Seeds, Size, Origin)
-            if (option.lastUsed != null || option.seeds != null || option.size != null || option.origin != null) {
+            // Metadata Badges Row (Last used, Playing now, Seeds, Size, Origin)
+            if (option.lastUsed != null || playingNow || option.seeds != null || option.size != null || option.origin != null) {
                 Spacer(modifier = Modifier.height(6.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     itemVerticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (option.lastUsed != null) StreamFlag("Last used")
+                    if (option.lastUsed != null) StreamFlag("Last used", background = AccentYellow, foreground = DarkForeground)
+                    if (playingNow) StreamFlag("Playing now", background = AccentGreen, foreground = DarkForeground)
                     option.seeds?.let { s ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -586,19 +595,19 @@ private fun StreamRow(
 }
 
 @Composable
-private fun StreamFlag(text: String) {
+private fun StreamFlag(text: String, background: Color, foreground: Color) {
     // Matches `.flag` in stremio-web's Stream.less.
     Box(
         modifier = Modifier
             .height(20.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(AccentYellow)
+            .background(background)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text.uppercase(),
-            color = DarkForeground,
+            color = foreground,
             fontSize = 10.5.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = 0.04.em,
