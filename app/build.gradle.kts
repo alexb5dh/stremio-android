@@ -36,6 +36,8 @@ if (localPropertiesFile.exists()) {
 }
 val posthogApiKey = (localProperties.getProperty("posthog.apiKey") ?: System.getenv("POSTHOG_API_KEY") ?: "").trim()
 val posthogHost = (localProperties.getProperty("posthog.host") ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com").trim()
+// owner/repo whose GitHub releases the in-app updater checks; GitHub Actions sets GITHUB_REPOSITORY
+val updateRepository = stringPropertyOrEnv("UPDATE_REPOSITORY") ?: stringPropertyOrEnv("GITHUB_REPOSITORY").orEmpty()
 
 android {
     namespace = "com.stremio.mobile"
@@ -60,6 +62,7 @@ android {
         }
         buildConfigField("String", "POSTHOG_API_KEY", "\"$posthogApiKey\"")
         buildConfigField("String", "POSTHOG_HOST", "\"$posthogHost\"")
+        buildConfigField("String", "UPDATE_REPOSITORY", "\"$updateRepository\"")
     }
 
     splits {

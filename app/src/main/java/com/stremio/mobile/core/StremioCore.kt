@@ -73,6 +73,12 @@ class StremioCore(context: Context) {
     var initialized = false
         private set
 
+    /** Set once at startup; null means the on-device server. No trailing slash. */
+    var remoteStreamingServerUrl: String? = null
+
+    val streamingServerUrl: String get() = remoteStreamingServerUrl ?: DEFAULT_STREAMING_SERVER_URL
+    val usesRemoteStreamingServer: Boolean get() = remoteStreamingServerUrl != null
+
     fun initialize() {
         if (initialized) return
         Core.addEventListener(listener)
@@ -153,6 +159,15 @@ class StremioCore(context: Context) {
 
     fun updateSettings(settings: com.stremio.core.types.profile.Profile.Settings) {
         dispatch(Action(Action.Type.Ctx(ActionCtx(ActionCtx.Args.UpdateSettings(settings)))), Field.CTX)
+    }
+
+    /** Needed on every profile change: logging in resets the profile settings. */
+    fun syncProfileStreamingServerUrl(settings: com.stremio.core.types.profile.Profile.Settings) {
+        if (settings.streamingServerUrl.trimEnd('/') != streamingServerUrl) {
+            // Fresh settings, so a concurrent change isn't undone.
+            val current = getCtx().profile.settings
+            updateSettings(current.copy(streamingServerUrl = "$streamingServerUrl/"))
+        }
     }
 
     fun updateStreamingServerSettings(settings: com.stremio.core.models.StreamingServer.Settings) {
@@ -435,7 +450,7 @@ class StremioCore(context: Context) {
 
     /**
      * Loads the Player model for [option] and emits the resolved playable URL once the core has
-     * converted the stream (torrents are routed through the local streaming server). Direct URL
+     * converted the stream (torrents are routed through the streaming server). Direct URL
      * streams are emitted immediately as a fallback.
      */
     fun resolvePlayableUrl(option: CoreStream): Flow<String> {
@@ -544,7 +559,7 @@ class StremioCore(context: Context) {
             is Stream.Source.Url -> source.value.url
             is Stream.Source.Tramvai -> {
                 val t = source.value
-                "$STREAMING_SERVER_BASE/${t.infoHash}/${t.fileIdx ?: STREAMING_SERVER_AUTO_FILE_INDEX}"
+                "$streamingServerUrl/${t.infoHash}/${t.fileIdx ?: STREAMING_SERVER_AUTO_FILE_INDEX}"
             }
             is Stream.Source.External -> source.value.externalUrl
             else -> null
@@ -574,7 +589,7 @@ class StremioCore(context: Context) {
     }
 
     companion object {
-        const val STREAMING_SERVER_BASE = "http://127.0.0.1:11470"
+        const val DEFAULT_STREAMING_SERVER_URL = "http://127.0.0.1:11470"
         const val STREAMING_SERVER_AUTO_FILE_INDEX = -1
         private const val DEVICE_NAME = "android"
     }

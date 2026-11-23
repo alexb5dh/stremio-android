@@ -197,6 +197,8 @@ To create the base64 keystore secret from PowerShell:
 [Convert]::ToBase64String([IO.File]::ReadAllBytes($env:ANDROID_KEYSTORE_FILE))
 ```
 
+The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it; builds with neither, such as local ones, report that update checks aren't configured.
+
 ## Native Libraries
 
 Prebuilt native outputs are committed for supported ABIs:
