@@ -7,8 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: Version name to publish for a manual release
+        description: Version name for a manual build
         required: false
+      publish:
+        description: Publish the APKs as a GitHub release (tag pushes always publish)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -153,7 +157,7 @@ jobs:
           path: jniLibs/
 
   release:
-    name: Build and Publish Release APK
+    name: Build Release APK
     runs-on: ubuntu-latest
     needs: build-stream-server
 
@@ -245,7 +249,47 @@ jobs:
           -PVERSION_CODE=${VERSION_CODE}
           -PVERSION_NAME=${VERSION_NAME}
 
+      # Keep the ABI args and the upload steps below in sync with supportedAbis in app/build.gradle.kts
+      - name: Verify release APK outputs
+        run: python .github/scripts/verify-apk-outputs.py app/build/outputs/apk/release armeabi-v7a arm64-v8a x86 x86_64 universal
+
+      - name: Upload arm64-v8a release APK
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload universal release APK
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/release/app-universal-release.apk
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload armeabi-v7a release APK
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload x86_64 release APK
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/release/app-x86_64-release.apk
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload x86 release APK
+        uses: actions/upload-artifact@v7
+        with:
+          path: app/build/outputs/apk/release/app-x86-release.apk
+          archive: false
+          if-no-files-found: error
+
       - name: Prepare release assets
+        if: github.ref_type == 'tag' || inputs.publish
         shell: bash
         run: |
           rm -rf dist
@@ -262,6 +306,7 @@ jobs:
           fi
 
       - name: Verify release assets
+        if: github.ref_type == 'tag' || inputs.publish
         shell: bash
         run: |
           test -f "dist/StremioMobile-v${VERSION_NAME}-armeabi-v7a-release.apk"
@@ -271,14 +316,8 @@ jobs:
           test -f "dist/StremioMobile-v${VERSION_NAME}-universal-release.apk"
           test -f "dist/StremioMobile-v${VERSION_NAME}-SHA256SUMS.txt"
 
-      - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: stremio-mobile-release-${{ env.VERSION_NAME }}
-          path: dist/*
-          if-no-files-found: error
-
       - name: Publish GitHub Release
+        if: github.ref_type == 'tag' || inputs.publish
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
