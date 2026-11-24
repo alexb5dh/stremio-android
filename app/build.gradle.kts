@@ -36,7 +36,6 @@ if (localPropertiesFile.exists()) {
 }
 val posthogApiKey = (localProperties.getProperty("posthog.apiKey") ?: System.getenv("POSTHOG_API_KEY") ?: "").trim()
 val posthogHost = (localProperties.getProperty("posthog.host") ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com").trim()
-// owner/repo whose GitHub releases the in-app updater checks; GitHub Actions sets GITHUB_REPOSITORY
 val updateRepository = stringPropertyOrEnv("UPDATE_REPOSITORY") ?: stringPropertyOrEnv("GITHUB_REPOSITORY").orEmpty()
 val debugKeystoreFile = stringPropertyOrEnv("DEBUG_KEYSTORE_FILE")
 
