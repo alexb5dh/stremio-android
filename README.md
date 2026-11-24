@@ -197,7 +197,9 @@ To create the base64 keystore secret from PowerShell:
 [Convert]::ToBase64String([IO.File]::ReadAllBytes($env:ANDROID_KEYSTORE_FILE))
 ```
 
-The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it; builds with neither, such as local ones, report that update checks aren't configured.
+Optional `DEBUG_KEYSTORE_BASE64` secret: a debug keystore with the default debug credentials, so CI debug builds keep one signing key.
+
+The in-app update check looks for releases in the GitHub repository the APK was built from (`GITHUB_REPOSITORY` in GitHub Actions). Set the `UPDATE_REPOSITORY` Gradle property or environment variable (`owner/repo`) to override it; debug builds and builds with neither, such as local ones, report that update checks aren't configured.
 
 ## Native Libraries
 
@@ -231,7 +233,7 @@ The MPV rebuild script is intended for Linux/macOS environments. stream-server n
 - Gradle build cache and configuration cache are enabled.
 - ExoPlayer remains the default player backend.
 - MPV support is vendored source plus native outputs, not a Maven runtime dependency.
-- The app targets Android package `com.stremio.mobile`.
+- The app targets Android package `com.stremio.mobile` (`com.stremio.mobile.debug` for debug builds).
 - Supported native ABIs are currently `armeabi-v7a`, `arm64-v8a`, `x86`, and `x86_64`.
 - The project is optimized for phone UI. TV/D-pad behavior is not the primary target.
 

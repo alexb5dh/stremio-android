@@ -36,8 +36,8 @@ if (localPropertiesFile.exists()) {
 }
 val posthogApiKey = (localProperties.getProperty("posthog.apiKey") ?: System.getenv("POSTHOG_API_KEY") ?: "").trim()
 val posthogHost = (localProperties.getProperty("posthog.host") ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com").trim()
-// owner/repo whose GitHub releases the in-app updater checks; GitHub Actions sets GITHUB_REPOSITORY
 val updateRepository = stringPropertyOrEnv("UPDATE_REPOSITORY") ?: stringPropertyOrEnv("GITHUB_REPOSITORY").orEmpty()
+val debugKeystoreFile = stringPropertyOrEnv("DEBUG_KEYSTORE_FILE")
 
 android {
     namespace = "com.stremio.mobile"
@@ -75,6 +75,11 @@ android {
     }
 
     signingConfigs {
+        if (debugKeystoreFile != null) {
+            getByName("debug") {
+                storeFile = file(debugKeystoreFile)
+            }
+        }
         if (!hasPartialReleaseSigning && releaseSigningValues.all { it != null }) {
             create("release") {
                 storeFile = file(releaseSigningValues[0]!!)
@@ -87,10 +92,9 @@ android {
 
     buildTypes {
         debug {
+            applicationIdSuffix = ".debug"
+            buildConfigField("String", "UPDATE_REPOSITORY", "\"\"")
             matchingFallbacks.add("release")
-            signingConfigs.findByName("release")?.let {
-                signingConfig = it
-            }
         }
         release {
             isMinifyEnabled = true
