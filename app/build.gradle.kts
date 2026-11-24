@@ -38,7 +38,6 @@ val posthogApiKey = (localProperties.getProperty("posthog.apiKey") ?: System.get
 val posthogHost = (localProperties.getProperty("posthog.host") ?: System.getenv("POSTHOG_HOST") ?: "https://us.i.posthog.com").trim()
 // owner/repo whose GitHub releases the in-app updater checks; GitHub Actions sets GITHUB_REPOSITORY
 val updateRepository = stringPropertyOrEnv("UPDATE_REPOSITORY") ?: stringPropertyOrEnv("GITHUB_REPOSITORY").orEmpty()
-// fixed debug key (default debug credentials), so newer debug builds install over older ones; CI sets it from a secret
 val debugKeystoreFile = stringPropertyOrEnv("DEBUG_KEYSTORE_FILE")
 
 android {
@@ -94,9 +93,7 @@ android {
 
     buildTypes {
         debug {
-            // separate package, so debug and release builds install side by side
             applicationIdSuffix = ".debug"
-            // releases are a different package, so the in-app updater can't update debug builds
             buildConfigField("String", "UPDATE_REPOSITORY", "\"\"")
             matchingFallbacks.add("release")
         }
