@@ -25,6 +25,7 @@
       }
     },
     {
+      "_comment": "Placeholder: copy of the com.stremio.mobile client until a Firebase app is registered for this package",
       "client_info": {
         "mobilesdk_app_id": "1:244136171924:android:094ed00ff3d60e9d4e5781",
         "android_client_info": {
